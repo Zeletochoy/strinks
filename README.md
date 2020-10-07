@@ -14,7 +14,7 @@ Stonks + Drinks = ~terrible name idea~ Strinks
 To enable the automatic formatting git hook run `git config --local core.hooksPath .githooks/`
 
 
-# Backends
+# Shops
 
 ## Current
 

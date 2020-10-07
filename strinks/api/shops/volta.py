@@ -4,10 +4,10 @@ import requests
 from bs4 import BeautifulSoup
 from unidecode import unidecode
 
-from . import Backend, BackendBeer, NoBeersError, NotABeerError
+from . import NoBeersError, NotABeerError, Shop, ShopBeer
 
 
-class Volta(Backend):
+class Volta(Shop):
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
         while True:
@@ -26,7 +26,7 @@ class Volta(Backend):
         if empty:
             raise NoBeersError
 
-    def _parse_beer_page(self, page_soup) -> BackendBeer:
+    def _parse_beer_page(self, page_soup) -> ShopBeer:
         footstamp = page_soup.find("div", class_="footstamp")
         title = page_soup.find("h1", class_="product_name").get_text().strip()
         if "　" in title:
@@ -52,7 +52,7 @@ class Volta(Backend):
                 price = int(row_value.rsplit("税込", 1)[-1][: -len("円)")].replace(",", ""))
         image_url = "http:" + page_soup.find(id="zoom1")["href"]
         try:
-            return BackendBeer(
+            return ShopBeer(
                 raw_name=raw_name,
                 milliliters=ml,
                 price=price,
@@ -62,7 +62,7 @@ class Volta(Backend):
         except UnboundLocalError:
             raise NotABeerError
 
-    def iter_beers(self) -> Iterator[BackendBeer]:
+    def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():
             try:
                 for beer_page in self._iter_page_beers(listing_page):
