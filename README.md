@@ -14,11 +14,14 @@ Stonks + Drinks = ~terrible name idea~ Strinks
 To enable the automatic formatting git hook run `git config --local core.hooksPath .githooks/`
 
 
-# TODO
+# Backends
 
-## Backends
+## Current
 
 - [Beer Volta](http://beervolta.com/)
+
+## TODO
+
 - [Chouseiya](https://www.chouseiya-beer.com/)
 - [Antenna America](https://www.antenna-america.com/search/)
 - [Hopbuds](https://hopbudsnagoya.com/collections/craft-beers)
