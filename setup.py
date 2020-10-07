@@ -11,14 +11,13 @@ setup(
     packages=find_packages(),
     license="beerware",
     install_requires=[
-        "aiohttp[speedups]>=3.6.2",
         "attrs>=20.2.0",
         "beautifulsoup4>=4.9.2",
         "certifi>=2020.6.20",
         "click>=6.7",
+        "unidecode>=1.1.1",
     ],
     entry_points={
-        "console_scripts": [
-        ],
+        "console_scripts": [],
     },
 )
