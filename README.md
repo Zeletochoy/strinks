@@ -9,6 +9,11 @@ Stonks + Drinks = ~terrible name idea~ Strinks
 * Get python 3.6+ and pip
 * `pip install .`
 
+## Formatting
+
+To enable the automatic formatting git hook run `git config --local core.hooksPath .githooks/`
+
+
 # TODO
 
 ## Backends

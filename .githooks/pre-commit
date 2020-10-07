@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Check if black and isort are installed
+if ! (isort -h && black -h) > /dev/null 2>&1; then
+    pip install isort black
+fi
+
+# Get repo root
+FILE=`realpath $0`
+HOOKS_PATH=`dirname $FILE`
+REPO_ROOT=`dirname $HOOKS_PATH`
+
+# Run black and isort before commiting
+isort -l 120 --lai 2 $REPO_ROOT/{strinks,tests,setup.py}
+black --config $REPO_ROOT/pyproject.toml $REPO_ROOT/{strinks,tests,setup.py}
