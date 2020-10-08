@@ -36,8 +36,8 @@ class Chouseiya(Shop):
     def _parse_beer_page(self, page_soup) -> ShopBeer:
         title = page_soup.find("h3", class_="item_name").get_text().strip()
         beer_name, brewery_name = title[1:].split("」", 1)
-        beer_name, _ = beer_name.split("※", 1)
-        brewery_name, _ = brewery_name.split("※", 1)
+        beer_name = beer_name.split("※", 1)[0]
+        brewery_name = brewery_name.split("※", 1)[0]
         price = int(page_soup.find("span", class_="price02_default").get_text().strip().replace(",", "")[len("¥ ") :])
         desc = page_soup.find(id="detail_not_stock_box__description_detail").get_text().strip()
         try:

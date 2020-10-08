@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Tuple, Dict
+from typing import Dict, Optional, Tuple
 
 import attr
 import requests
@@ -16,7 +16,7 @@ CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
 
 @attr.s
 class UntappdBeerResult:
-    beer_id: str = attr.ib()
+    beer_id: int = attr.ib()
     name: str = attr.ib()
     brewery: str = attr.ib()
     style: str = attr.ib()
@@ -31,23 +31,19 @@ class UntappdAPI:
             with open(CACHE_PATH) as f:
                 json_cache = json.load(f)
             self.cache = {
-                query: UntappdBeerResult(**res) if res is not None else None
-                for query, res in json_cache.items()
+                query: UntappdBeerResult(**res) if res is not None else None for query, res in json_cache.items()
             }
         except Exception:
             self.cache: Dict[str, UntappdBeerResult] = {}
 
     def save_cache(self):
-        json_cache = {
-            query: attr.asdict(res) if res is not None else None
-            for query, res in self.cache.items()
-        }
+        json_cache = {query: attr.asdict(res) if res is not None else None for query, res in self.cache.items()}
         with open(CACHE_PATH, "w") as f:
             json.dump(json_cache, f, ensure_ascii=False)
 
     def _item_to_beer(self, item: BeautifulSoup) -> UntappdBeerResult:
         return UntappdBeerResult(
-            beer_id=item.find("a", class_="label")["href"].rsplit("/", 1)[-1],
+            beer_id=int(item.find("a", class_="label")["href"].rsplit("/", 1)[-1]),
             name=item.find("p", class_="name").get_text().strip(),
             brewery=item.find("p", class_="brewery").get_text().strip(),
             style=item.find("p", class_="style").get_text().strip(),

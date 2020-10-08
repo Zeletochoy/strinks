@@ -34,12 +34,10 @@ class ShopBeer:
             if translated_brewery is not None:
                 clean_name = f"{translated_brewery} {self.beer_name}"
         yield self.raw_name
-        if self.beer_name is not None:
-            yield self.beer_name
         # Try removing extra suffixes (style, ...)
         if clean_name:
             for _ in range(2):
-                clean_name, _ = clean_name.rsplit(" ", 1).strip()
+                clean_name, _ = clean_name.rsplit(" ", 1)
                 if clean_name == self.brewery_name:
                     break
                 yield clean_name
