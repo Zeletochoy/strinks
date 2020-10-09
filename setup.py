@@ -15,6 +15,7 @@ setup(
         "beautifulsoup4>=4.9.2",
         "certifi>=2020.6.20",
         "click>=6.7",
+        "sqlalchemy>=1.3.19",
         "unidecode>=1.1.1",
     ],
     entry_points={
