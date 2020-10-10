@@ -16,6 +16,7 @@ setup(
         "certifi>=2020.6.20",
         "click>=6.7",
         "sqlalchemy>=1.3.19",
+        "sqlalchemy-stubs>=0.3",
         "unidecode>=1.1.1",
     ],
     entry_points={

@@ -1,65 +1,59 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, cast
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import relationship
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Type, TypeVar, Union
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from .tables import Beer, Offering, Shop
 
 
-Base = declarative_base()
+T = TypeVar("T")
 
 
-class Beer(Base):
-    __tablename__ = "beers"
+class BeerDB:
+    def __init__(self, path: Union[str, Path, None] = None, read_only=True, debug_echo=False):
+        """
+        path: path to the sqlite database file or None for in-memory
+        debug_echo: log SQL queries
+        """
+        self.debug_echo = debug_echo
+        if path is None:
+            db_uri = ":memory:"
+        else:
+            db_uri = f"/file:{Path(path).resolve()}?uri=true"
+            if read_only:
+                db_uri += "&mode=ro"
+        self.engine = create_engine(f"sqlite://{db_uri}", echo=debug_echo, poolclass=StaticPool)
+        self.session_maker = sessionmaker(bind=self.engine)
+        self.session = self.session_maker()
 
-    beer_id = Column(Integer, primary_key=True)
-    image_url = Column(String, nullable=False)
-    name = Column(String, nullable=False)
-    name = Column(String, nullable=False)
-    brewery = Column(String, nullable=False)
-    style = Column(String, nullable=False)
-    abv = Column(Float, nullable=False)
-    ibu = Column(Float, nullable=False)
-    rating = Column(Float, nullable=False)
-    updated_at = Column(DateTime, nullable=False)
+        Beer.__table__.create(self.engine, checkfirst=True)
+        Shop.__table__.create(self.engine, checkfirst=True)
+        Offering.__table__.create(self.engine, checkfirst=True)
 
-    offerings = relationship("Offering", back_populates="beer")
+    def __del__(self):
+        try:
+            self.session.close()
+        except Exception:
+            pass
 
-    def __str__(self) -> str:
-        return f"{self.brewery} - {self.name} ({self.style}, {self.abv}%, {self.ibu}IBU, {self.rating:0.02f})"
+    def _insert(self, _check_existence: bool, table: Type[T], **params) -> T:
+        if _check_existence:
+            instance = self.session.query(table).filter_by(**params).first()
+        else:
+            instance = None
+        if not instance:
+            instance = table(**params)  # type: ignore
+            self.session.add(instance)
+        return instance
 
-    def __repr__(self) -> str:
-        return f"Beer({str(self)})"
-
-
-class Shop(Base):
-    __tablename__ = "shops"
-
-    shop_id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    url = Column(String, nullable=False)
-    shipping_fee = Column(Integer, nullable=False)
-    free_shipping_over = Column(Integer, nullable=False)
-
-    offerings = relationship("Offering", back_populates="shop")
-
-
-class Offering(Base):
-    __tablename__ = "offerings"
-
-    shop_beer_id = Column(Integer, primary_key=True)
-    shop_id = Column(Integer, ForeignKey(f"{Shop.__tablename__}.shop_id"), nullable=False)
-    beer_id = Column(Integer, ForeignKey(f"{Beer.__tablename__}.beer_id"), nullable=False)
-    milliliters = Column(Integer, nullable=False)
-    price = Column(Integer, nullable=False)
-    image_url = Column(String)
-    updated_at = Column(DateTime, nullable=False)
-
-    beer = relationship("Beer", back_populates="offerings")
-    shop = relationship("Shop", back_populates="offerings")
-
-    @hybrid_property
-    def price_per_ml(self) -> float:
-        return self.price / self.milliliters
-
-    @price_per_ml.expression
-    def price_per_ml(self):
-        return cast(self.price, Float) / cast(self.milliliters, Float)
+    @contextmanager
+    def commit_or_rollback(self):
+        try:
+            yield
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
