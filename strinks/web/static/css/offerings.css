@@ -1,0 +1,30 @@
+.demo-card-wide.mdl-card {
+    width: 100%;
+}
+
+.demo-card-wide > .mdl-card__title {
+    color: #fff;
+    height: 100px;
+}
+
+.demo-card-wide > .mdl-card__menu {
+    color: #fff;
+}
+
+.demo-card-wide > .mdl-card__supporting-text {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    width: 100%;
+}
+
+.demo-list-two.mdl-list {
+    margin: 0px;
+    padding: 0px;
+}
+
+.demo-list-two > .mdl-list__item--two-line {
+    padding: 8px;
+    height: auto;
+}

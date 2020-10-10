@@ -10,5 +10,5 @@ app = Flask(__name__)
 @app.route("/beers")
 def offerings():
     db = get_db()
-    beers = db.get_best_cospa(12).all()
+    beers = db.get_best_cospa(42).all()
     return render_template("offerings.html", beers=beers)

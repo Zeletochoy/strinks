@@ -11,15 +11,15 @@
       <span class="mdl-chip__text">{{beer.style}}</span>
     </span>
     <span class="mdl-chip">
-      <span class="mdl-chip__text">{{beer.abv}}%</span>
+      <span class="mdl-chip__text">{{beer.abv|round(1)}}%</span>
     </span>
     {% if beer.ibu %}
     <span class="mdl-chip">
-      <span class="mdl-chip__text">{{beer.ibu}} IBU</span>
+      <span class="mdl-chip__text">{{beer.ibu|int}} IBU</span>
     </span>
     {% endif %}
     <span class="mdl-chip">
-      <span class="mdl-chip__text"><i class="fab fa-untappd"></i>{{beer.rating}}</span>
+      <span class="mdl-chip__text"><i class="fab fa-untappd"></i> {{beer.rating|round(2)}}</span>
     </span>
   </div>
   <div class="mdl-card__actions mdl-card--border">

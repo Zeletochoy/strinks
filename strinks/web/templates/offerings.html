@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/offerings.css"/>
+{% endblock %}
+
 {% block content %}
 <div class="mdl-grid">
   {% for beer in beers %}
