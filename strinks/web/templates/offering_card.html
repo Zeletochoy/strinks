@@ -1,5 +1,5 @@
 <div class="demo-card-wide mdl-card mdl-shadow--2dp">
-  <div class="mdl-card__title" style="background: url('{{beer.image_url}}') center / cover;">
+  <div class="mdl-card__title" style="background: url('{{beer.offerings[0].image_url or beer.image_url}}') center / cover;">
     <h2 class="mdl-card__title-text">
       {{beer.brewery}}
       <br/>
