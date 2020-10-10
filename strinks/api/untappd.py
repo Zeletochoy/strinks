@@ -17,6 +17,7 @@ CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
 
 
 MAX_REQ_PER_HOUR = 100
+session = requests.Session()
 
 
 @attr.s
@@ -73,12 +74,18 @@ class UntappdAPI:
             return self.cache[query]
         self.rate_limit()
         try:
-            page = requests.get(
+            res = session.get(
                 "https://untappd.com/search",
                 params={"q": query},
-                headers={"User-Agent": "Mozilla/5.0 (Linux) Gecko/20100101 Firefox/81.0"},
-            ).text
-            soup = BeautifulSoup(page, "html.parser")
+                headers={
+                    "Referer": "https://untappd.com/home",
+                    "User-Agent": "Mozilla/5.0 (Linux) Gecko/20100101 Firefox/81.0"},
+            )
+            if res.status_code >= 300:
+                print(f"WARNING: HTTP {res.status_code} when querying untappd")
+                import ipdb; ipdb.set_trace()
+                return None  # Skip cache, TODO retry
+            soup = BeautifulSoup(res.text, "html.parser")
             item = soup.find("div", class_="beer-item")
             beer = self._item_to_beer(item)
         except Exception:
