@@ -46,6 +46,7 @@ class Offering(_Base):
 
     shop_id = Column(Integer, ForeignKey(f"{Shop.__tablename__}.shop_id"), primary_key=True, index=True)
     beer_id = Column(Integer, ForeignKey(f"{Beer.__tablename__}.beer_id"), primary_key=True, index=True)
+    url = Column(String, nullable=False)
     milliliters = Column(Integer, nullable=False)
     price = Column(Integer, nullable=False)
     image_url = Column(String)

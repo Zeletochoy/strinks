@@ -1,9 +1,9 @@
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Type, TypeVar, Union
+from typing import Iterator, Optional, Type, TypeVar, Union
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -114,6 +114,7 @@ class BeerDB:
         self,
         shop: Shop,
         beer: Beer,
+        url: str,
         milliliters: int,
         price: int,
         image_url: Optional[str] = None,
@@ -126,6 +127,7 @@ class BeerDB:
         offering = Offering(
             shop_id=shop.shop_id,
             beer_id=beer.beer_id,
+            url=url,
             milliliters=milliliters,
             price=price,
             image_url=image_url,
@@ -133,3 +135,19 @@ class BeerDB:
         )
         self.session.add(offering)
         return offering
+
+    def get_best_cospa(self, n: int, mean: float = 3.75, base: float = 8) -> Iterator[Beer]:
+        def beer_value(rating, cost):
+            return (base ** (rating - mean)) / cost
+
+        conn = self.engine.raw_connection()
+        conn.create_function("beer_value", 2, beer_value)
+
+        return (
+            self.session.query(Beer)
+            .join(Offering)
+            .filter(Beer.rating != 0)
+            .order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc())
+            .distinct()
+            .limit(n)
+        )

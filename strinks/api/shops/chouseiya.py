@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, Tuple
 
 import requests
 from bs4 import BeautifulSoup
@@ -28,17 +28,17 @@ class Chouseiya(Shop):
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[BeautifulSoup]:
+    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:
         empty = True
         for item in page_soup("div", class_="product_item"):
             url = item.find("a")["href"]
             page = requests.get(url).text
-            yield BeautifulSoup(page, "html.parser")
+            yield BeautifulSoup(page, "html.parser"), url
             empty = False
         if empty:
             raise NoBeersError
 
-    def _parse_beer_page(self, page_soup) -> ShopBeer:
+    def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         title = page_soup.find("h3", class_="item_name").get_text().strip()
         beer_name, brewery_name = title[1:].split("」", 1)
         beer_name = beer_name.split("※", 1)[0]
@@ -54,6 +54,7 @@ class Chouseiya(Shop):
         try:
             return ShopBeer(
                 raw_name=title,
+                url=url,
                 brewery_name=brewery_name,
                 beer_name=beer_name,
                 milliliters=ml,
@@ -67,9 +68,9 @@ class Chouseiya(Shop):
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():
             try:
-                for beer_page in self._iter_page_beers(listing_page):
+                for beer_page, url in self._iter_page_beers(listing_page):
                     try:
-                        yield self._parse_beer_page(beer_page)
+                        yield self._parse_beer_page(beer_page, url)
                     except NotABeerError:
                         continue
             except NoBeersError:

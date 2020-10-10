@@ -13,8 +13,8 @@ setup(
     install_requires=[
         "attrs>=20.2.0",
         "beautifulsoup4>=4.9.2",
-        "certifi>=2020.6.20",
         "click>=6.7",
+        "Flask>=1.1.2",
         "requests>=2.24.0",
         "sqlalchemy>=1.3.19",
         "sqlalchemy-stubs>=0.3",

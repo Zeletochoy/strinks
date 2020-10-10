@@ -11,6 +11,7 @@ from ..translation import BREWERY_JP_EN
 @attr.s
 class ShopBeer:
     raw_name: str = attr.ib()
+    url: str = attr.ib()
     milliliters: int = attr.ib()
     price: int = attr.ib()
     quantity: int = attr.ib()

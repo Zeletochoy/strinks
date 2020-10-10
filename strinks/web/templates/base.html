@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="description" content="Strinks">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <title>Strinks</title>
+    <script src="https://kit.fontawesome.com/70d9797945.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-deep_purple.min.css" />
+    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <!-- Wide card with share menu button -->
+    <style>
+      .demo-card-wide.mdl-card {
+        width: 100%;
+      }
+      .demo-card-wide > .mdl-card__title {
+        color: #fff;
+        height: 100px;
+      }
+      .demo-card-wide > .mdl-card__menu {
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+      <header class="mdl-layout__header">
+        <div class="mdl-layout__header-row">
+          <!-- Title -->
+          <span class="mdl-layout-title">Strinks</span>
+          <!-- Add spacer, to align navigation to the right -->
+          <div class="mdl-layout-spacer"></div>
+          <!-- Navigation. We hide it in small screens. -->
+          <nav class="mdl-navigation">
+            <a class="mdl-navigation__link" href="/beers"><i class="fas fa-beer"></i> Beers</a>
+            <a class="mdl-navigation__link" href="/shops"><i class="fas fa-store"></i> Shops</a>
+          </nav>
+        </div>
+      </header>
+      <main class="mdl-layout__content">
+        <div class="page-content">
+        {% block content %}{% endblock %}
+        </div>
+      </main>
+      <footer class="mdl-mini-footer">
+        <div class="mdl-mini-footer__left-section">
+          <div class="mdl-logo">Strinks</div>
+          <ul class="mdl-mini-footer__link-list">
+            <li>Work in progress, PRs welcome!</li>
+            <li><a href="https://github.com/Zeletochoy/strinks">Github</a></li>
+          </ul>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, Tuple
 
 import requests
 from bs4 import BeautifulSoup
@@ -21,17 +21,17 @@ class Volta(Shop):
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[BeautifulSoup]:
+    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:
         empty = True
         for item in page_soup("div", class_="item_box"):
             url = "http://beervolta.com/" + item.find("a")["href"]
             page = requests.get(url).text
-            yield BeautifulSoup(page, "html.parser")
+            yield BeautifulSoup(page, "html.parser"), url
             empty = False
         if empty:
             raise NoBeersError
 
-    def _parse_beer_page(self, page_soup) -> ShopBeer:
+    def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         footstamp = page_soup.find("div", class_="footstamp")
         title = page_soup.find("h1", class_="product_name").get_text().strip()
         if "　" in title:
@@ -59,6 +59,7 @@ class Volta(Shop):
         try:
             return ShopBeer(
                 raw_name=raw_name,
+                url=url,
                 milliliters=ml,
                 price=price,
                 quantity=1,
@@ -70,9 +71,9 @@ class Volta(Shop):
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():
             try:
-                for beer_page in self._iter_page_beers(listing_page):
+                for beer_page, url in self._iter_page_beers(listing_page):
                     try:
-                        yield self._parse_beer_page(beer_page)
+                        yield self._parse_beer_page(beer_page, url)
                     except NotABeerError:
                         continue
             except NoBeersError:

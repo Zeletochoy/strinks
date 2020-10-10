@@ -66,6 +66,7 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
                     db.insert_offering(
                         shop=db_shop,
                         beer=db_beer,
+                        url=offering.url,
                         milliliters=offering.milliliters,
                         price=offering.price,
                         image_url=offering.image_url,
