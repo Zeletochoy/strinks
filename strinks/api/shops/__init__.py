@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional, Type
 
 import attr
 
+from ...db.models import BeerDB
+from ...db.tables import Shop as DBShop
 from ..translation import BREWERY_JP_EN
 
 
@@ -27,26 +29,42 @@ class ShopBeer:
 
     def iter_untappd_queries(self) -> Iterator[str]:
         clean_name = ""
-        if self.brewery_name is not None and self.beer_name is not None:
-            clean_name = f"{self.brewery_name} {self.beer_name}"
+        brewery = self.brewery_name
+        if brewery is not None and self.beer_name is not None:
+            clean_name = f"{brewery} {self.beer_name}"
             yield clean_name
             translated_brewery = BREWERY_JP_EN.get(self.brewery_name)
             if translated_brewery is not None:
                 clean_name = f"{translated_brewery} {self.beer_name}"
+                brewery = translated_brewery
         yield self.raw_name
         # Try removing extra suffixes (style, ...)
         if clean_name:
             for _ in range(2):
                 clean_name, _ = clean_name.rsplit(" ", 1)
-                if clean_name == self.brewery_name:
+                if clean_name == brewery:
                     break
                 yield clean_name
 
 
 class Shop(ABC):
+    short_name = "shop"
+    display_name = "Shop"
+
     @abstractmethod
     def iter_beers(self) -> Iterator[ShopBeer]:
         ...
+
+    @abstractmethod
+    def get_db_entry(self, db: BeerDB) -> DBShop:
+        ...
+
+
+def get_shop_map() -> Dict[str, Type[Shop]]:
+    from .chouseiya import Chouseiya
+    from .volta import Volta
+
+    return {cls.short_name: cls for cls in (Chouseiya, Volta)}
 
 
 class NotABeerError(Exception):

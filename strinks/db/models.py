@@ -1,6 +1,7 @@
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
-from typing import Type, TypeVar, Union
+from typing import Optional, Type, TypeVar, Union
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -57,3 +58,78 @@ class BeerDB:
         except Exception:
             self.session.rollback()
             raise
+
+    def insert_shop(
+        self,
+        name: str,
+        url: str,
+        shipping_fee: int,
+        free_shipping_over: Optional[int] = None,
+        check_existence: bool = True,
+    ) -> Shop:
+        if check_existence:
+            shop = self.session.query(Shop).filter_by(name=name).first()
+            if shop is not None:
+                return shop
+        shop = Shop(
+            name=name,
+            url=url,
+            shipping_fee=shipping_fee,
+            free_shipping_over=free_shipping_over,
+        )
+        self.session.add(shop)
+        return shop
+
+    def insert_beer(
+        self,
+        beer_id: int,
+        image_url: str,
+        name: str,
+        brewery: str,
+        style: str,
+        abv: float,
+        ibu: float,
+        rating: float,
+        check_existence: bool = True,
+    ) -> Beer:
+        if check_existence:
+            beer = self.session.query(Beer).filter_by(beer_id=beer_id).first()
+            if beer is not None:
+                return beer
+        beer = Beer(
+            beer_id=beer_id,
+            image_url=image_url,
+            name=name,
+            brewery=brewery,
+            style=style,
+            abv=abv,
+            ibu=ibu,
+            rating=rating,
+            updated_at=datetime.now(),
+        )
+        self.session.add(beer)
+        return beer
+
+    def insert_offering(
+        self,
+        shop: Shop,
+        beer: Beer,
+        milliliters: int,
+        price: int,
+        image_url: Optional[str] = None,
+        check_existence: bool = True,
+    ) -> Offering:
+        if check_existence:
+            offering = self.session.query(Offering).filter_by(shop_id=shop.shop_id, beer_id=beer.beer_id).first()
+            if offering is not None:
+                return offering
+        offering = Offering(
+            shop_id=shop.shop_id,
+            beer_id=beer.beer_id,
+            milliliters=milliliters,
+            price=price,
+            image_url=image_url,
+            updated_at=datetime.now(),
+        )
+        self.session.add(offering)
+        return offering

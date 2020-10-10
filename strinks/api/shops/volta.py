@@ -4,10 +4,15 @@ import requests
 from bs4 import BeautifulSoup
 from unidecode import unidecode
 
+from ...db.models import BeerDB
+from ...db.tables import Shop as DBShop
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 
 
 class Volta(Shop):
+    short_name = "volta"
+    display_name = "Beer Volta"
+
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
         while True:
@@ -72,3 +77,10 @@ class Volta(Shop):
                         continue
             except NoBeersError:
                 break
+
+    def get_db_entry(self, db: BeerDB) -> DBShop:
+        return db.insert_shop(
+            name="Beer Volta",
+            url="http://beervolta.com/",
+            shipping_fee=908,
+        )

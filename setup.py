@@ -15,11 +15,15 @@ setup(
         "beautifulsoup4>=4.9.2",
         "certifi>=2020.6.20",
         "click>=6.7",
+        "requests>=2.24.0",
         "sqlalchemy>=1.3.19",
         "sqlalchemy-stubs>=0.3",
         "unidecode>=1.1.1",
     ],
     entry_points={
-        "console_scripts": [],
+        "console_scripts": [
+            "strinks-init-db = strinks.cli.init_db:cli",
+            "strinks-scrape = strinks.cli.scrape:cli",
+        ],
     },
 )

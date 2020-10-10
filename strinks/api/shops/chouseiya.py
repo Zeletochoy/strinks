@@ -3,10 +3,15 @@ from typing import Iterator
 import requests
 from bs4 import BeautifulSoup
 
+from ...db.models import BeerDB
+from ...db.tables import Shop as DBShop
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 
 
 class Chouseiya(Shop):
+    short_name = "chouseiya"
+    display_name = "Chouseiya"
+
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
         params = {
@@ -69,3 +74,11 @@ class Chouseiya(Shop):
                         continue
             except NoBeersError:
                 break
+
+    def get_db_entry(self, db: BeerDB) -> DBShop:
+        return db.insert_shop(
+            name=self.display_name,
+            url="https://www.chouseiya-beer.com/",
+            shipping_fee=900,
+            free_shipping_over=10000,
+        )

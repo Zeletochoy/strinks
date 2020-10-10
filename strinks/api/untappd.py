@@ -22,6 +22,7 @@ MAX_REQ_PER_HOUR = 100
 @attr.s
 class UntappdBeerResult:
     beer_id: int = attr.ib()
+    image_url: str = attr.ib()
     name: str = attr.ib()
     brewery: str = attr.ib()
     style: str = attr.ib()
@@ -33,6 +34,7 @@ class UntappdBeerResult:
 class UntappdAPI:
     def __init__(self):
         try:
+            # TODO: expire cache
             with open(CACHE_PATH) as f:
                 json_cache = json.load(f)
             self.cache = {
@@ -40,7 +42,7 @@ class UntappdAPI:
             }
         except Exception:
             self.cache: Dict[str, UntappdBeerResult] = {}
-        self.last_request_timestamps: Deque[float] = deque()
+        self.last_request_timestamps: Deque[float] = deque(maxlen=MAX_REQ_PER_HOUR)
 
     def rate_limit(self):
         if len(self.last_request_timestamps) == MAX_REQ_PER_HOUR:
@@ -57,6 +59,7 @@ class UntappdAPI:
     def _item_to_beer(self, item: BeautifulSoup) -> UntappdBeerResult:
         return UntappdBeerResult(
             beer_id=int(item.find("a", class_="label")["href"].rsplit("/", 1)[-1]),
+            image_url=item.find("a", class_="label").find("img")["src"],
             name=item.find("p", class_="name").get_text().strip(),
             brewery=item.find("p", class_="brewery").get_text().strip(),
             style=item.find("p", class_="style").get_text().strip(),
