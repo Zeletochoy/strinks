@@ -1,7 +1,9 @@
 import json
 import logging
+import time
+from collections import deque
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Deque, Dict, Optional, Tuple
 
 import attr
 import requests
@@ -12,6 +14,9 @@ from .shops import ShopBeer
 
 logger = logging.getLogger(__name__)
 CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
+
+
+MAX_REQ_PER_HOUR = 100
 
 
 @attr.s
@@ -35,6 +40,14 @@ class UntappdAPI:
             }
         except Exception:
             self.cache: Dict[str, UntappdBeerResult] = {}
+        self.last_request_timestamps: Deque[float] = deque()
+
+    def rate_limit(self):
+        if len(self.last_request_timestamps) == MAX_REQ_PER_HOUR:
+            time_since_oldest = time.monotonic() - self.last_request_timestamps[0]
+            if time_since_oldest < 3600:
+                time.sleep(3600 - time_since_oldest)
+        self.last_request_timestamps.append(time.monotonic())
 
     def save_cache(self):
         json_cache = {query: attr.asdict(res) if res is not None else None for query, res in self.cache.items()}
@@ -55,6 +68,7 @@ class UntappdAPI:
     def search(self, query: str) -> Optional[UntappdBeerResult]:
         if query in self.cache:
             return self.cache[query]
+        self.rate_limit()
         try:
             page = requests.get(
                 "https://untappd.com/search",
