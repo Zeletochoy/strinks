@@ -20,4 +20,7 @@ BREWERY_JP_EN = {
     "ストーン": "Stone",
     "ローデンバッハ": "Rodenbach",
     "ブレイクサイド": "Breakside",
+    "ノースアイランドビール": "North Island Beer",
+    "リヴィジョン": "Revision",
+    "オムニポロ": "Omnipollo",
 }
