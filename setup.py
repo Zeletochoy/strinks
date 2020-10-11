@@ -14,6 +14,7 @@ setup(
         "attrs>=20.2.0",
         "beautifulsoup4>=4.9.2",
         "click>=6.7",
+        "cloudscraper>=1.2.48",
         "Flask>=1.1.2",
         "requests>=2.24.0",
         "sqlalchemy>=1.3.19",

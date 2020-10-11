@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Deque, Dict, Optional, Tuple
 
 import attr
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 
 from .shops import ShopBeer
@@ -17,7 +17,7 @@ CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
 
 
 MAX_REQ_PER_HOUR = 100
-session = requests.Session()
+session = cloudscraper.create_scraper(allow_brotli=False)
 
 
 @attr.s
