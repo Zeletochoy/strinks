@@ -32,6 +32,8 @@ class Volta(Shop):
             raise NoBeersError
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
+        if page_soup.find("div", class_="sold_out") is not None:
+            raise NotABeerError
         footstamp = page_soup.find("div", class_="footstamp")
         title = page_soup.find("h1", class_="product_name").get_text().strip()
         if "　" in title:
