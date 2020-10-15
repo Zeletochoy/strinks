@@ -28,3 +28,7 @@
     padding: 8px;
     height: auto;
 }
+
+.beer-title {
+    text-shadow: 1px 1px 3px black;
+}
