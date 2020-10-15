@@ -23,4 +23,8 @@ BREWERY_JP_EN = {
     "ノースアイランドビール": "North Island Beer",
     "リヴィジョン": "Revision",
     "オムニポロ": "Omnipollo",
+    "キャプテンローレンス": "Captain Lawrence",
+    "アルマナック": "Almanach",
+    "クルーリパブリック": "CREW Republic",
+    "ベアードビール": "Baird",
 }
