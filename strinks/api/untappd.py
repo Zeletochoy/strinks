@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
 
 
-MAX_REQ_PER_HOUR = 100
+MAX_REQ_PER_HOUR = 1000
+REQ_COOLDOWN = 5
 session = cloudscraper.create_scraper(allow_brotli=False)
 
 
@@ -50,6 +51,10 @@ class UntappdAPI:
             time_since_oldest = time.monotonic() - self.last_request_timestamps[0]
             if time_since_oldest < 3600:
                 time.sleep(3600 - time_since_oldest)
+        if self.last_request_timestamps:
+            time_since_last = time.monotonic() - self.last_request_timestamps[-1]
+            if time_since_last < REQ_COOLDOWN:
+                time.sleep(REQ_COOLDOWN - time_since_last)
         self.last_request_timestamps.append(time.monotonic())
 
     def save_cache(self):
