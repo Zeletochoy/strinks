@@ -5,6 +5,7 @@
 .demo-card-wide > .mdl-card__title {
     color: #fff;
     height: 100px;
+    text-decoration: none;
 }
 
 .demo-card-wide > .mdl-card__menu {

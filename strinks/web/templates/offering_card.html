@@ -1,18 +1,21 @@
 <div class="demo-card-wide mdl-card mdl-shadow--2dp">
-  <div class="mdl-card__title" style="background: url('{{beer.offerings[0].image_url or beer.image_url}}') center / cover;">
+  <a class="mdl-card__title" href="https://untappd.com/beer/{{beer.beer_id}}"
+     style="background: url('{{beer.offerings[0].image_url or beer.image_url}}') center / cover;">
     <h2 class="mdl-card__title-text beer-title">
       {{beer.brewery}}
       <br/>
       {{beer.name}}
     </h2>
-  </div>
+  </a>
   <div class="mdl-card__supporting-text">
     <span class="mdl-chip">
       <span class="mdl-chip__text">{{beer.style}}</span>
     </span>
+    {% if beer.abv %}
     <span class="mdl-chip">
       <span class="mdl-chip__text">{{beer.abv|round(1)}}%</span>
     </span>
+    {% endif %}
     {% if beer.ibu %}
     <span class="mdl-chip">
       <span class="mdl-chip__text">{{beer.ibu|int}} IBU</span>
@@ -36,12 +39,5 @@
       </li>
       {% endfor %}
     </ul>
-  </div>
-  <div class="mdl-card__menu">
-    <a href="https://untappd.com/beer/{{beer.beer_id}}">
-      <button class="mdl-button mdl-button--icon mdl-js-button mdl-js-ripple-effect">
-        <i class="fab fa-untappd"></i>
-      </button>
-    </a>
   </div>
 </div>
