@@ -21,10 +21,10 @@ To enable the automatic formatting git hook run `git config --local core.hooksPa
 - [Beer Volta](http://beervolta.com/)
 - [Chouseiya](https://www.chouseiya-beer.com/)
 - [Antenna America](https://www.antenna-america.com/search/)
+- [Goodbeer Faucets](https://gbfbottleshoppe.com/)
 
 ## TODO
 
-- [Goodbeer Faucets](https://gbfbottleshoppe.com/)
 - [Hopbuds](https://hopbudsnagoya.com/collections/craft-beers)
 - [Uchu Brewing](https://uchubrew.shop-pro.jp/)
 - [TDM 1874](https://search.rakuten.co.jp/search/mall/tdm1874/)

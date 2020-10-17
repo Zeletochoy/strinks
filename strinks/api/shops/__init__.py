@@ -64,9 +64,15 @@ class Shop(ABC):
 def get_shop_map() -> Dict[str, Type[Shop]]:
     from .antenna import AntennaAmerica
     from .chouseiya import Chouseiya
+    from .gbf import GoodBeerFaucets
     from .volta import Volta
 
-    return {cls.short_name: cls for cls in (AntennaAmerica, Chouseiya, Volta)}
+    return {cls.short_name: cls for cls in (
+        AntennaAmerica,
+        Chouseiya,
+        GoodBeerFaucets,
+        Volta
+    )}
 
 
 class NotABeerError(Exception):
