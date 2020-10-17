@@ -2,9 +2,64 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/offerings.css"/>
+<link rel="stylesheet" href="/static/css/getmdl-select.min.css">
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/offerings.js"></script>
+<script defer src="/static/js/getmdl-select.min.js"></script>
 {% endblock %}
 
 {% block content %}
+<form method="GET">
+
+  <div class="mdl-grid">
+    <!--Shop-->
+    <div class="mdl-cell mdl-cell--2-col">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label getmdl-select getmdl-select__fix-height">
+        <input type="text" value="" class="mdl-textfield__input" id="shop_id" readonly>
+        <input type="hidden" value="" name="shop_id" onchange="this.form.submit()">
+        <label for="shop_id" class="mdl-textfield__label">Shop</label>
+        <ul for="shop_id" class="mdl-menu mdl-menu--bottom-left mdl-js-menu">
+          <li class="mdl-menu__item" data-val=""{% if not shop_id %} data-selected="true"{% endif %}>All</li>
+          {% for shop in shops %}
+          <li class="mdl-menu__item" data-val="{{shop.shop_id}}"{% if shop.shop_id == shop_id %} data-selected="true"{% endif %}>
+            {{shop.name}}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <!--Value Factor-->
+    <div class="mdl-cell mdl-cell--2-col">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label getmdl-select getmdl-select__fix-height">
+        <input type="text" value="" class="mdl-textfield__input" id="value_factor" readonly>
+        <input type="hidden" value="" name="value_factor" onchange="this.form.submit()">
+        <label for="value_factor" class="mdl-textfield__label">Profile</label>
+        <ul for="value_factor" class="mdl-menu mdl-menu--bottom-left mdl-js-menu">
+          <li class="mdl-menu__item" data-val="1"{% if value_factor == 1 %} data-selected="true"{% endif %}>
+            The Cheapest Stuff
+          </li>
+          <li class="mdl-menu__item" data-val="2"{% if value_factor == 2 %} data-selected="true"{% endif %}>
+            Great Deals
+          </li>
+          <li class="mdl-menu__item" data-val="4"{% if not value_factor or value_factor == 4 %} data-selected="true"{% endif %}>
+            Balanced Drinker
+          </li>
+          <li class="mdl-menu__item" data-val="8"{% if value_factor == 8 %} data-selected="true"{% endif %}>
+            Salaryman Connoiseur
+          </li>
+          <li class="mdl-menu__item" data-val="12"{% if value_factor == 12 %} data-selected="true"{% endif %}>
+            High Class
+          </li>
+          <li class="mdl-menu__item" data-val="10000"{% if value_factor == 10000 %} data-selected="true"{% endif %}>
+            I Spare No Expense
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</form>
 <div class="mdl-grid">
   {% for beer in beers %}
   <div class="mdl-cell mdl-cell--4-col">

@@ -6,3 +6,22 @@
 .mdl-layout__header-row {
     padding-left: 0px;
 }
+
+.mdl-navigation__link {
+    font-size: 16px;
+}
+
+.title-link {
+    text-decoration: none;
+    color: white;
+    align-self: stretch;
+}
+
+.title-link > img{
+    height: 64px;
+}
+
+.mdl-mini-footer {
+    padding-top: 0px;
+    padding-bottom: 0px;
+}

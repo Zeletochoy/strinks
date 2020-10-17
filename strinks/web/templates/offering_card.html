@@ -27,16 +27,15 @@
   </div>
   <div class="mdl-card__actions mdl-card--border">
     <ul class="demo-list-two mdl-list">
-      {% for offering in beer.offerings %}
-      <li class="mdl-list__item mdl-list__item--two-line">
-        <span class="mdl-list__item-primary-content">
-          <span>{{offering.shop.name}}</span>
-          <span class="mdl-list__item-sub-title">{{offering.price}}¥ - {{offering.milliliters}}mL</span>
-        </span>
-        <span class="mdl-list__item-secondary-content">
-          <a class="mdl-list__item-secondary-action" href="{{offering.url}}"><i class="fas fa-store"></i></a>
-        </span>
-      </li>
+      {% for offering in beer.offerings | sort(attribute='price') %}
+      <a class="offering-item" href="{{offering.url}}">
+        <li class="mdl-list__item mdl-list__item--two-line">
+          <span class="mdl-list__item-primary-content">
+            <span>{{offering.shop.name}}</span>
+            <span class="mdl-list__item-sub-title">{{offering.price}}¥ - {{offering.milliliters}}mL</span>
+          </span>
+        </li>
+      </a>
       {% endfor %}
     </ul>
   </div>

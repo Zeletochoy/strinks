@@ -16,7 +16,14 @@ def offerings():
     shop_id = request.args.get("shop_id", default=None, type=int)
     value_factor = request.args.get("value_factor", default=8, type=float)
     beers = db.get_best_cospa(TOP_N, value_factor, shop_id=shop_id).all()
-    return render_template("offerings.html", beers=beers)
+    shops = db.get_shops()
+    return render_template(
+        "offerings.html",
+        beers=beers,
+        shops=shops,
+        shop_id=shop_id,
+        value_factor=value_factor,
+    )
 
 
 @app.route("/shops")

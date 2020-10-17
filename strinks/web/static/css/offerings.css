@@ -33,3 +33,13 @@
 .beer-title {
     text-shadow: 1px 1px 3px black;
 }
+
+.offering-item {
+    text-decoration: none;
+}
+
+.mdl-list__item--two-line {
+    height: auto;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
