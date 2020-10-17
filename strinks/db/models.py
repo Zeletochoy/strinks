@@ -63,6 +63,7 @@ class BeerDB:
         self,
         name: str,
         url: str,
+        image_url: str,
         shipping_fee: int,
         free_shipping_over: Optional[int] = None,
         check_existence: bool = True,
@@ -74,6 +75,7 @@ class BeerDB:
         shop = Shop(
             name=name,
             url=url,
+            image_url=image_url,
             shipping_fee=shipping_fee,
             free_shipping_over=free_shipping_over,
         )
@@ -151,3 +153,6 @@ class BeerDB:
             .distinct()
             .limit(n)
         )
+
+    def get_shops(self) -> Iterator[Shop]:
+        return self.session.query(Shop)

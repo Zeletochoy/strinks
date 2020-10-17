@@ -85,5 +85,6 @@ class Volta(Shop):
         return db.insert_shop(
             name="Beer Volta",
             url="http://beervolta.com/",
+            image_url="http://img21.shop-pro.jp/PA01384/703/PA01384703.png?cmsp_timestamp=20201007154831",
             shipping_fee=908,
         )

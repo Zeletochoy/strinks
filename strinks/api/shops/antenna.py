@@ -80,5 +80,6 @@ class AntennaAmerica(Shop):
         return db.insert_shop(
             name=self.display_name,
             url="https://www.antenna-america.com/",
+            image_url="https://www.antenna-america.com/img/cache/5c8b665f-0054-4741-94eb-1052c0a8b503.png",
             shipping_fee=990,
         )

@@ -101,5 +101,6 @@ class GoodBeerFaucets(Shop):
         return db.insert_shop(
             name=self.display_name,
             url="https://gbfbottleshoppe.com/",
+            image_url="https://img21.shop-pro.jp/PA01456/392/PA01456392.jpg?cmsp_timestamp=20201016192055",
             shipping_fee=890,
         )

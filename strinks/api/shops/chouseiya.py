@@ -80,6 +80,7 @@ class Chouseiya(Shop):
         return db.insert_shop(
             name=self.display_name,
             url="https://www.chouseiya-beer.com/",
+            image_url="https://www.chouseiya-beer.com/html/template/default/img/common/header_logo.png",
             shipping_fee=900,
             free_shipping_over=10000,
         )
