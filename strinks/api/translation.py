@@ -27,4 +27,7 @@ BREWERY_JP_EN = {
     "アルマナック": "Almanach",
     "クルーリパブリック": "CREW Republic",
     "ベアードビール": "Baird",
+    "アルヴィンヌ": "Alvine",
+    "ファイアーストーンウォーカー": "Firestone Walker",
+    "アウトベールセル": "Oud Berseel",
 }
