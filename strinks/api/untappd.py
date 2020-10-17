@@ -96,7 +96,11 @@ class UntappdAPI:
 
     def try_find_beer(self, beer: ShopBeer) -> Optional[Tuple[UntappdBeerResult, str]]:
         """Returns result and used query if found or None otherwise"""
-        for query in beer.iter_untappd_queries():
+        queries = list(beer.iter_untappd_queries())
+        for query in queries:
+            if self.cache.get(query) is not None:
+                return self.cache[query], query
+        for query in queries:
             res = self.search(query)
             if res is not None:
                 return res, query
