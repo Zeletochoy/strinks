@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 
 from ..db import get_db
 
@@ -6,11 +6,16 @@ from ..db import get_db
 app = Flask(__name__)
 
 
+TOP_N = 100
+
+
 @app.route("/")
 @app.route("/beers")
 def offerings():
     db = get_db()
-    beers = db.get_best_cospa(42).all()
+    shop_id = request.args.get("shop_id", default=None, type=int)
+    value_factor = request.args.get("value_factor", default=8, type=float)
+    beers = db.get_best_cospa(TOP_N, value_factor, shop_id=shop_id).all()
     return render_template("offerings.html", beers=beers)
 
 
