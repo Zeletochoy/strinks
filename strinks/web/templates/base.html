@@ -8,6 +8,7 @@
     <title>Strinks</title>
     <script src="https://kit.fontawesome.com/70d9797945.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-deep_purple.min.css" />
+    <link rel="stylesheet" href="/static/css/base.css" />
     <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
     {% block extra_css %}{% endblock %}
     {% block extra_js %}{% endblock %}
@@ -17,7 +18,10 @@
       <header class="mdl-layout__header">
         <div class="mdl-layout__header-row">
           <!-- Title -->
-          <span class="mdl-layout-title">Strinks</span>
+          <img id="header-logo" src="/static/images/logo-128.png">
+          <span class="mdl-layout-title">
+            Strinks
+          </span>
           <!-- Add spacer, to align navigation to the right -->
           <div class="mdl-layout-spacer"></div>
           <!-- Navigation. We hide it in small screens. -->
