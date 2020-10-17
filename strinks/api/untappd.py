@@ -69,7 +69,7 @@ class UntappdAPI:
             name=item.find("p", class_="name").get_text().strip(),
             brewery=item.find("p", class_="brewery").get_text().strip(),
             style=item.find("p", class_="style").get_text().strip(),
-            abv=float(item.find("p", class_="abv").get_text().strip().split("%", 1)[0]),
+            abv=float(item.find("p", class_="abv").get_text().strip().split("%", 1)[0].replace("N/A", "nan")),
             ibu=float(item.find("p", class_="ibu").get_text().strip().split(" ", 1)[0].replace("N/A", "nan")),
             rating=float(item.find("div", class_="caps")["data-rating"]),
         )
