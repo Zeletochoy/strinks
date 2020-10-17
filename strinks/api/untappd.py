@@ -97,14 +97,11 @@ class UntappdAPI:
             soup = BeautifulSoup(res.text, "html.parser")
             item = soup.find("div", class_="beer-item")
             beer = self._item_to_beer(item)
-        except (AttributeError, KeyError, IndexError, ValueError) as e:
-            print("Except in untappd search:", e)
+        except (AttributeError, KeyError, IndexError, ValueError):
             beer = None
         except Exception as e:
-            import ipdb
-
-            ipdb.set_trace()
-            beer = None
+            print("Unexpected exception in Untappd search:", e)
+            return None  # Skip cache, TODO retry
         self.cache[query] = beer
         self.save_cache()
         return beer
