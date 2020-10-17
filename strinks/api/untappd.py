@@ -74,21 +74,31 @@ class UntappdAPI:
             return self.cache[query]
         self.rate_limit()
         try:
+            print(f"Untappd query for '{query}'")
             res = session.get(
                 "https://untappd.com/search",
                 params={"q": query},
                 headers={
                     "Referer": "https://untappd.com/home",
-                    "User-Agent": "Mozilla/5.0 (Linux) Gecko/20100101 Firefox/81.0"},
+                    "User-Agent": "Mozilla/5.0 (Linux) Gecko/20100101 Firefox/81.0",
+                },
             )
             if res.status_code >= 300:
                 print(f"WARNING: HTTP {res.status_code} when querying untappd")
-                import ipdb; ipdb.set_trace()
+                import ipdb
+
+                ipdb.set_trace()
                 return None  # Skip cache, TODO retry
             soup = BeautifulSoup(res.text, "html.parser")
             item = soup.find("div", class_="beer-item")
             beer = self._item_to_beer(item)
-        except Exception:
+        except (AttributeError, KeyError, IndexError, ValueError) as e:
+            print("Except in untappd search:", e)
+            beer = None
+        except Exception as e:
+            import ipdb
+
+            ipdb.set_trace()
             beer = None
         self.cache[query] = beer
         self.save_cache()
