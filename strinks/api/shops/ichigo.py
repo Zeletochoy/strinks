@@ -54,7 +54,6 @@ class IchiGoIchiAle(Shop):
             raise NotABeerError
         price_text = page_soup.find("span", class_="product_price").get_text().strip()
         price = int(re.search(r"税込([0-9,]+)円", price_text).group(1).replace(",", ""))
-        table = page_soup.find("table", class_="product_spec_table")
         desc = page_soup.find("div", class_="product_explain").get_text()
         ml = int(re.search(r"容量:(\d+)ml", desc.lower()).group(1))
         image_url = page_soup.find("img", class_="product_img_main_img")["src"]
