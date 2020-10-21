@@ -22,6 +22,7 @@ To enable the automatic formatting git hook run `git config --local core.hooksPa
 - [Chouseiya](https://www.chouseiya-beer.com/)
 - [Antenna America](https://www.antenna-america.com/search/)
 - [Goodbeer Faucets](https://gbfbottleshoppe.com/)
+- [Icho Go Ichi Ale](https://151l.shop/)
 
 ## TODO
 
