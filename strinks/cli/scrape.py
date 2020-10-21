@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Set
 
 import click
 from sqlalchemy.exc import IntegrityError
@@ -32,6 +32,7 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
 
     for shop in shops:
         print(f"Scraping {shop.display_name}")
+        found_ids: Set[int] = set()
         with db.commit_or_rollback():
             db_shop = shop.get_db_entry(db)
         for offering in shop.iter_beers():
@@ -59,6 +60,7 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
                             ibu=beer.ibu,
                             rating=beer.rating,
                         )
+                        found_ids.add(beer.beer_id)
                 except IntegrityError:
                     if verbose:
                         print(f"Beer with ID {beer.beer_id} already in DB ({beer.brewery} - {beer.name})")
@@ -72,3 +74,6 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
                         image_url=offering.image_url,
                     )
                 print(f"- {beer.brewery} - {beer.name}: {offering.price}¥ ({offering.milliliters}mL)")
+        with db.commit_or_rollback():
+            db.remove_expired_offerings(db_shop, found_ids)
+    print("Done.")

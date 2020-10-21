@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Optional, Type, TypeVar, Union
+from typing import Iterable, Iterator, Optional, Type, TypeVar, Union
 
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
@@ -159,3 +159,11 @@ class BeerDB:
 
     def get_shops(self) -> Iterator[Shop]:
         return self.session.query(Shop)
+
+    def remove_expired_offerings(self, shop: Shop, valid_ids: Iterable[int]) -> None:
+        (
+            self.session.query(Offering)
+            .filter_by(shop_id=shop.shop_id)
+            .filter(~Offering.beer_id.in_(valid_ids))
+            .delete(synchronize_session=False)
+        )
