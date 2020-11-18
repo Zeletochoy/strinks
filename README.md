@@ -26,6 +26,7 @@ To enable the automatic formatting git hook run `git config --local core.hooksPa
 
 ## TODO
 
+- [Dig The Line](https://dig-the-line-store.com/)
 - [Scissors](https://craftbeers.thebase.in/)
 - [Hopbuds](https://hopbudsnagoya.com/collections/craft-beers)
 - [Uchu Brewing](https://uchubrew.shop-pro.jp/)
