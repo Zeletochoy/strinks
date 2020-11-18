@@ -1,3 +1,4 @@
+import re
 from typing import Iterator, Tuple
 
 import requests
@@ -43,6 +44,7 @@ class Volta(Shop):
             brewery = unidecode(brewery_p("a")[-1].get_text().strip())
             raw_name = brewery + unidecode(title).rsplit(brewery, 1)[-1]
         raw_name = raw_name.replace("\t", " ").replace("  ", " ")
+        raw_name = re.sub(r" \d\d?/\d\d?入荷予定", "", raw_name)
         cart_table = page_soup.find("table", class_="add_cart_table")
         for row in cart_table("tr"):
             try:
