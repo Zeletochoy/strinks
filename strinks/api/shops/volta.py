@@ -37,14 +37,14 @@ class Volta(Shop):
             raise NotABeerError
         footstamp = page_soup.find("div", class_="footstamp")
         title = page_soup.find("h1", class_="product_name").get_text().strip()
+        title = re.sub(r" \d\d?/\d\d?入荷予定", "", title)
         if "　" in title:
             raw_name = title.rsplit("　", 1)[-1]
         else:
             brewery_p = footstamp("p")[-1]
             brewery = unidecode(brewery_p("a")[-1].get_text().strip())
             raw_name = brewery + unidecode(title).rsplit(brewery, 1)[-1]
-        raw_name = raw_name.replace("\t", " ").replace("  ", " ")
-        raw_name = re.sub(r" \d\d?/\d\d?入荷予定", "", raw_name)
+        raw_name = raw_name.replace("\t", " ").replace("  ", " ").lower()
         cart_table = page_soup.find("table", class_="add_cart_table")
         for row in cart_table("tr"):
             try:
