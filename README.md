@@ -18,17 +18,17 @@ To enable the automatic formatting git hook run `git config --local core.hooksPa
 
 ## Current
 
+- [Antenna America](https://www.antenna-america.com/search/)
 - [Beer Volta](http://beervolta.com/)
 - [Chouseiya](https://www.chouseiya-beer.com/)
-- [Antenna America](https://www.antenna-america.com/search/)
+- [Dig The Line](https://dig-the-line-store.com/)
 - [Goodbeer Faucets](https://gbfbottleshoppe.com/)
+- [Hopbuds](https://hopbudsnagoya.com/collections/craft-beers)
 - [Icho Go Ichi Ale](https://151l.shop/)
 
 ## TODO
 
-- [Dig The Line](https://dig-the-line-store.com/)
 - [Scissors](https://craftbeers.thebase.in/)
-- [Hopbuds](https://hopbudsnagoya.com/collections/craft-beers)
 - [Uchu Brewing](https://uchubrew.shop-pro.jp/)
 - [TDM 1874](https://search.rakuten.co.jp/search/mall/tdm1874/)
 - [Distant Shores Brewing](https://en.dsbtokyo.shop/shop)
