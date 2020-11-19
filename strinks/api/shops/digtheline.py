@@ -1,5 +1,5 @@
 import re
-from typing import Iterator, Tuple
+from typing import Iterator
 
 import requests
 from bs4 import BeautifulSoup
