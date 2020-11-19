@@ -68,11 +68,12 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
     from .gbf import GoodBeerFaucets
     from .hopbuds import HopBuds
     from .ichigo import IchiGoIchiAle
+    from .ohtsuki import Ohtsuki
     from .volta import Volta
 
     return {
         cls.short_name: cls
-        for cls in (AntennaAmerica, Chouseiya, DigTheLine, GoodBeerFaucets, HopBuds, IchiGoIchiAle, Volta)
+        for cls in (AntennaAmerica, Chouseiya, DigTheLine, GoodBeerFaucets, HopBuds, IchiGoIchiAle, Ohtsuki, Volta)
     }
 
 
