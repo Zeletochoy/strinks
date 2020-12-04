@@ -19,58 +19,72 @@ class AntennaAmerica(Shop):
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
         while True:
-            url = f"https://www.antenna-america.com/search/is_stock:1/page:{i}"
-            page = requests.get(url).text
-            yield BeautifulSoup(page, "html.parser")
+            url = (
+                "https://services.mybcapps.com/bc-sf-filter/search?t=1607057124294&sort=created-descending&_=pf"
+                f"&shop=antenna-america-shop.myshopify.com&page={i}&limit=24&display=grid&collection_scope=0"
+                "&tag=&product_available=false&variant_available=false&build_filter_tree=true&check_cache=false"
+                "&sort_first=available&q=&locale=en&event_type=init"
+            )
+            yield requests.get(url).json()
             i += 1
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:
+    def _iter_page_beers(self, page_json: dict) -> Iterator[dict]:
         empty = True
-        for item in page_soup("div", class_="item-info"):
-            url = "https://www.antenna-america.com" + item.find("a")["href"]
-            page = requests.get(url).text
-            yield BeautifulSoup(page, "html.parser"), url
+        for item in page_json["products"]:
+            yield item
             empty = False
         if empty:
             raise NoBeersError
 
-    def _parse_beer_page(self, page_soup, url) -> ShopBeer:
-        title = page_soup.find(id="PartsItemTitle").get_text().split(" / ", 1)[0].strip()
-        if "Pack】" in title:
+    def _parse_beer_page(self, beer_item: dict) -> ShopBeer:
+        brewery_name = beer_item["product_type"].lower()
+        if not brewery_name:
             raise NotABeerError
-        raw_name = re.sub(" *([【].*[】]|[(].*[)]) *", "", title)
-        price = int("".join(c for c in page_soup.find("h3", class_="item-price")("span")[-1].get_text() if c in DIGITS))
-        table = page_soup.find(id="PartsItemAttribute")
-        for row in table("tr"):
-            try:
-                row_name = row.find("th").get_text().strip()
-                row_value = row.find("td").get_text().strip()
-            except AttributeError:
-                continue
-            if row_name == "内容量":
+        title = beer_item["title"].lower()[len(brewery_name):]
+        beer_name = title.split("/", 1)[0].strip()
+        if beer_name.endswith(" pack"):
+            raise NotABeerError
+        price = beer_item["price_min"]
+        image_url = beer_item["images_info"][0]["src"]
+        url = f"https://www.antenna-america.com/en/collections/all/products/{beer_item['handle']}"
+        match = re.search(r"\((\d+)ml\)", title)
+        if match is not None:
+            ml = int(match.group(1))
+            beer_name = beer_name[:- len(match.group(0)) - 1]
+        else:
+            page = requests.get(url).text
+            soup = BeautifulSoup(page)
+            table = soup.find(id="PartsItemAttribute")
+            if table is None:
+                raise NotABeerError
+            for row in table("tr"):
                 try:
-                    ml = int("".join(c for c in row_value if c in DIGITS))
-                except ValueError:
-                    raise NotABeerError
-        image_url = "https://www.antenna-america.com" + page_soup.find("img", class_="item-image")["src"]
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+                    row_name = row.find("th").get_text().strip()
+                    row_value = row.find("td").get_text().strip()
+                except AttributeError:
+                    continue
+                if row_name == "内容量":
+                    try:
+                        ml = int("".join(c for c in row_value if c in DIGITS))
+                    except ValueError:
+                        raise NotABeerError
+        return ShopBeer(
+            beer_name=beer_name,
+            brewery_name=brewery_name,
+            raw_name=brewery_name + " " + beer_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():
             try:
-                for beer_page, url in self._iter_page_beers(listing_page):
+                for beer_item in self._iter_page_beers(listing_page):
                     try:
-                        yield self._parse_beer_page(beer_page, url)
+                        yield self._parse_beer_page(beer_item)
                     except NotABeerError:
                         continue
             except NoBeersError:
