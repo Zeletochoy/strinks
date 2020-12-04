@@ -31,7 +31,7 @@ class Ohtsuki(Shop):
             raw_name = name_cell.get_text("\n").lower().split("\n", 1)[0]
             raw_name = re.sub("( ?(大瓶|初期|Magnum|Jeroboam|alc[.].*))*$", "", raw_name)
             ml = int(ml_cell.get_text().strip().replace("ml", ""))
-            price = int(price_cell.get_text().strip().replace("円", ""))
+            price = int(int(price_cell.get_text().strip().replace("円", "")) * 1.1)  # tax
             yield ShopBeer(
                 raw_name=raw_name,
                 url=url,
@@ -46,5 +46,5 @@ class Ohtsuki(Shop):
             name=self.display_name,
             url="http://www.ohtsuki-saketen.com/",
             image_url="http://www.ohtsuki-saketen.com/columnpicture/kriek%20de%20ranke%20and%20others.jpg",
-            shipping_fee=42,
+            shipping_fee=1140,
         )
