@@ -46,7 +46,10 @@ class DigTheLine(Shop):
         except KeyError:
             brewery_name = beer_item["tags"].split("[", 1)[0].lower()
         brewery_name = brewery_name.replace("brasserie ", "")
-        ml = int(10 * float(match.group(2)))
+        ml = float(match.group(2))
+        if ml < 100:
+            ml *= 10
+        ml = int(ml)
         price = int(float(beer_item["price"]))
         return ShopBeer(
             beer_name=beer_name,

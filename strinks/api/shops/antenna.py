@@ -1,3 +1,4 @@
+import time
 import re
 from typing import Iterator, Tuple
 
@@ -19,11 +20,12 @@ class AntennaAmerica(Shop):
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
         while True:
+            ts = int(time.time() * 1000)
             url = (
-                "https://services.mybcapps.com/bc-sf-filter/search?t=1607057124294&sort=created-descending&_=pf"
-                f"&shop=antenna-america-shop.myshopify.com&page={i}&limit=24&display=grid&collection_scope=0"
-                "&tag=&product_available=false&variant_available=false&build_filter_tree=true&check_cache=false"
-                "&sort_first=available&q=&locale=en&event_type=init"
+                f"https://services.mybcapps.com/bc-sf-filter/filter?t={ts}&sort=created-descending&_=pf"
+                f"&shop=antenna-america-shop.myshopify.com&page={i}&limit=32&display=grid"
+                "&collection_scope=226404991137&tag=&product_available=false&variant_available=false"
+                "&build_filter_tree=true&check_cache=false&sort_first=available&locale=ja&event_type=history"
             )
             yield requests.get(url).json()
             i += 1
@@ -40,9 +42,10 @@ class AntennaAmerica(Shop):
         brewery_name = beer_item["product_type"].lower()
         if not brewery_name:
             raise NotABeerError
-        title = beer_item["title"].lower()[len(brewery_name):]
+        title = beer_item["title"].lower()[len(brewery_name) :]
         beer_name = title.split("/", 1)[0].strip()
         if beer_name.endswith(" pack"):
+            print("pack")
             raise NotABeerError
         price = beer_item["price_min"]
         image_url = beer_item["images_info"][0]["src"]
@@ -50,24 +53,29 @@ class AntennaAmerica(Shop):
         match = re.search(r"\((\d+)ml\)", title)
         if match is not None:
             ml = int(match.group(1))
-            beer_name = beer_name[:- len(match.group(0)) - 1]
+            beer_name = beer_name[: -len(match.group(0)) - 1]
         else:
             page = requests.get(url).text
             soup = BeautifulSoup(page)
             table = soup.find(id="PartsItemAttribute")
-            if table is None:
-                raise NotABeerError
-            for row in table("tr"):
-                try:
-                    row_name = row.find("th").get_text().strip()
-                    row_value = row.find("td").get_text().strip()
-                except AttributeError:
-                    continue
-                if row_name == "内容量":
+            if table is not None:
+                for row in table("tr"):
                     try:
-                        ml = int("".join(c for c in row_value if c in DIGITS))
-                    except ValueError:
-                        raise NotABeerError
+                        row_name = row.find("th").get_text().strip()
+                        row_value = row.find("td").get_text().strip()
+                    except AttributeError:
+                        continue
+                    if row_name == "内容量":
+                        try:
+                            ml = int("".join(c for c in row_value if c in DIGITS))
+                        except ValueError:
+                            raise NotABeerError
+            else:
+                desc = soup.find("div", class_="product-single__description").get_text().lower()
+                try:
+                    ml = int(re.search(r"(\d{3,4})ml", desc).group(1))
+                except (ValueError, AttributeError):
+                    raise NotABeerError
         return ShopBeer(
             beer_name=beer_name,
             brewery_name=brewery_name,
