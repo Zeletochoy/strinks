@@ -138,7 +138,9 @@ class BeerDB:
         self.session.add(offering)
         return offering
 
-    def get_best_cospa(self, n: int, value_factor: float = 8, shop_id: Optional[int] = None) -> Iterator[Beer]:
+    def get_best_cospa(
+        self, n: int, value_factor: float = 8, shop_id: Optional[int] = None, styles: Optional[Iterable[str]] = None
+    ) -> Iterator[Beer]:
         def beer_value(rating, cost):
             return (value_factor ** rating) / cost
 
@@ -149,6 +151,9 @@ class BeerDB:
 
         if shop_id is not None:
             query = query.join(Shop).filter_by(shop_id=shop_id)
+
+        if styles is not None:
+            query = query.filter(Beer.style.in_(styles))
 
         return (
             query.filter(Beer.rating != 0)

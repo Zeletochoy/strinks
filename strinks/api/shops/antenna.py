@@ -1,5 +1,5 @@
-import time
 import re
+import time
 from typing import Iterator, Tuple
 
 import requests
