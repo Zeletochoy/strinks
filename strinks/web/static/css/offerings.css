@@ -43,3 +43,8 @@
     padding-top: 4px;
     padding-bottom: 4px;
 }
+
+.mdl-menu__item {
+    line-height: unset;
+    height: auto
+}

@@ -7,6 +7,7 @@
 
 {% block extra_js %}
 <script src="/static/js/offerings.js"></script>
+<script src="/static/js/styles.js"></script>
 <script defer src="/static/js/getmdl-select.min.js"></script>
 {% endblock %}
 
@@ -58,9 +59,28 @@
         </ul>
       </div>
     </div>
+    <!--Styles-->
+    <div class="mdl-cell mdl-cell--1-col"> <!-- style="display: none">-->
+      <input type="hidden" value="" name="styles" id="styles-input">
+      <button id="menu-styles" type="button" class="mdl-button mdl-js-button mdl-button--raised">
+        Styles
+      </button>
+      <ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" for="menu-styles">
+        {% for style in styles %}
+        <li class="mdl-menu__item style-item" onclick="event.stopPropagation()">
+          <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="style-{{loop.index0}}" onclick="event.stopPropagation()">
+            <input type="checkbox" id="style-{{loop.index0}}" style-id="{{loop.index0}}"
+                   class="mdl-checkbox__input style-checkbox" onclick="event.stopPropagation()"
+                   {% if not enabled_styles or loop.index0 in enabled_styles %}checked{%endif%}>
+            <span class="mdl-checkbox__label" onclick="event.stopPropagation()">{{style}}</span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
     <!--Submit-->
     <div class="mdl-cell mdl-cell--1-col">
-      <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+      <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="updateStyles()">
         Update
       </button>
     </div>
