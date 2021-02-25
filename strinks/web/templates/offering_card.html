@@ -1,6 +1,7 @@
 <div class="demo-card-wide mdl-card mdl-shadow--2dp">
   <a class="mdl-card__title" href="https://untappd.com/beer/{{beer.beer_id}}"
-     style="background: url('{{beer.offerings[0].image_url or beer.image_url}}') center / cover;">
+     ci-bg-url="{{beer.offerings[0].image_url or beer.image_url}}"
+     ci-params="func=crop&gravity=auto">
     <h2 class="mdl-card__title-text beer-title">
       {{beer.brewery}}
       <br/>
