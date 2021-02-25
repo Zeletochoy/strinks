@@ -59,7 +59,9 @@ class Volta(Shop):
                     raise NotABeerError
             elif row_name == "販売価格":
                 price = int(row_value.rsplit("税込", 1)[-1][: -len("円)")].replace(",", ""))
-        image_url = "http:" + page_soup.find(id="zoom1")["href"]
+        image_url = page_soup.find(id="zoom1")["href"]
+        if not image_url.startswith("http"):
+            image_url = "http:" + image_url
         try:
             return ShopBeer(
                 raw_name=raw_name,
