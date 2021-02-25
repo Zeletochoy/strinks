@@ -7,7 +7,7 @@ from ..db import get_db
 app = Flask(__name__)
 
 
-TOP_N = 100
+TOP_N = 150
 
 
 @app.route("/")
