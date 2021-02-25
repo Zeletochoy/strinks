@@ -24,7 +24,7 @@ class AntennaAmerica(Shop):
             url = (
                 f"https://services.mybcapps.com/bc-sf-filter/filter?t={ts}&sort=created-descending&_=pf"
                 f"&shop=antenna-america-shop.myshopify.com&page={i}&limit=32&display=grid"
-                "&collection_scope=226404991137&tag=&product_available=false&variant_available=false"
+                "&collection_scope=226404991137&tag=&product_available=true&variant_available=true"
                 "&build_filter_tree=true&check_cache=false&sort_first=available&locale=ja&event_type=history"
             )
             yield requests.get(url).json()
@@ -68,8 +68,11 @@ class AntennaAmerica(Shop):
                     if row_name == "内容量":
                         try:
                             ml = int("".join(c for c in row_value if c in DIGITS))
+                            break
                         except ValueError:
                             raise NotABeerError
+                else:
+                    raise NotABeerError
             else:
                 desc = soup.find("div", class_="product-single__description").get_text().lower()
                 try:
