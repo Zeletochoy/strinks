@@ -36,8 +36,8 @@ class GoodBeerFaucets(Shop):
 
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         for cat_page in (
-            "https://gbfbottleshoppe.com/?mode=cate&cbid=2657122&csid=0&sort=n&page={}",  # domestic
             "https://gbfbottleshoppe.com/?mode=cate&cbid=2651706&csid=0&sort=n&page={}",  # imported
+            "https://gbfbottleshoppe.com/?mode=cate&cbid=2657122&csid=0&sort=n&page={}",  # domestic
         ):
             for page in self._iter_cat_pages(cat_page):
                 yield page
@@ -45,16 +45,12 @@ class GoodBeerFaucets(Shop):
                     break
 
     def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:
-        empty = True
         for item in page_soup("li", class_="prd_lst_unit"):
             if item.find("span", class_="prd_lst_soldout") is not None:
                 continue
             url = "https://gbfbottleshoppe.com/" + item.find("a")["href"]
             page = requests.get(url).text
             yield BeautifulSoup(page, "html.parser"), url
-            empty = False
-        if empty:
-            raise NoBeersError
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         title = page_soup.find("h2", class_="ttl_h2").get_text()
@@ -88,14 +84,11 @@ class GoodBeerFaucets(Shop):
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():
-            try:
-                for beer_page, url in self._iter_page_beers(listing_page):
-                    try:
-                        yield self._parse_beer_page(beer_page, url)
-                    except NotABeerError:
-                        continue
-            except NoBeersError:
-                break
+            for beer_page, url in self._iter_page_beers(listing_page):
+                try:
+                    yield self._parse_beer_page(beer_page, url)
+                except NotABeerError:
+                    continue
 
     def get_db_entry(self, db: BeerDB) -> DBShop:
         return db.insert_shop(
