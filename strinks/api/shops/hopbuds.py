@@ -63,6 +63,8 @@ class HopBuds(Shop):
                         yield self._parse_beer_page(beer_page, url)
                     except NotABeerError:
                         continue
+                    except Exception as e:
+                        print(f"Unexpected exception while parsing page, skipping.\n{e}")
             except NoBeersError:
                 break
 

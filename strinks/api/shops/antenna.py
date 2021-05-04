@@ -97,6 +97,8 @@ class AntennaAmerica(Shop):
                         yield self._parse_beer_page(beer_item)
                     except NotABeerError:
                         continue
+                    except Exception as e:
+                        print(f"Unexpected exception while parsing page, skipping.\n{e}")
             except NoBeersError:
                 break
 
