@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from typing import Dict, Iterator, Optional, Type
 
@@ -5,7 +6,7 @@ import attr
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..translation import BREWERY_JP_EN
+from ..translation import BREWERY_JP_EN, has_japanese, deepl_translate, to_romaji
 
 
 @attr.s
@@ -38,14 +39,25 @@ class ShopBeer:
             if translated_brewery is not None:
                 clean_name = f"{translated_brewery} {self.beer_name}"
                 brewery = translated_brewery
+                yield clean_name
         yield self.raw_name
-        # Try removing extra suffixes (style, ...)
         if clean_name:
+            # Try romaji/ translation
+            if has_japanese(clean_name):
+                yield to_romaji(clean_name)
+                yield deepl_translate(clean_name)
+            # Try without stuff in parentheses
+            yield re.sub("[(][^)]*[)]", "", clean_name)
+            # Try removing suffixes like style
             for _ in range(2):
                 clean_name, _ = clean_name.rsplit(" ", 1)
                 if clean_name == brewery:
                     break
                 yield clean_name
+        # Try romaji / translation
+        if has_japanese(self.raw_name):
+            yield to_romaji(self.raw_name)
+            yield deepl_translate(self.raw_name)
 
 
 class Shop(ABC):

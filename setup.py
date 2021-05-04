@@ -16,6 +16,7 @@ setup(
         "click>=6.7",
         "cloudscraper>=1.2.48",
         "Flask>=1.1.2",
+        "pykakasi>=2.0.8",
         "requests>=2.24.0",
         "sqlalchemy>=1.3.19",
         "sqlalchemy-stubs>=0.3",

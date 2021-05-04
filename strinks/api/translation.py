@@ -1,3 +1,9 @@
+import requests
+import pykakasi
+
+from .settings import DEEPL_API_KEY
+
+
 BREWERY_JP_EN = {
     "ビアへるん": "Beer Hearn",
     "ベアレン": "Bearen",
@@ -30,4 +36,30 @@ BREWERY_JP_EN = {
     "アルヴィンヌ": "Alvine",
     "ファイアーストーンウォーカー": "Firestone Walker",
     "アウトベールセル": "Oud Berseel",
+    "鬼伝説": "Oni Densetsu",
 }
+
+kks = pykakasi.kakasi()
+
+
+def has_japanese(text: str) -> bool:
+    return any(ord(c) > 0x3000 for c in text)
+
+
+def deepl_translate(text: str) -> str:
+    res = requests.get(
+        "https://api-free.deepl.com/v2/translate",
+        params=dict(
+            auth_key=DEEPL_API_KEY,
+            text=text,
+            split_sentences="0",
+            source_lang="JA",
+            target_lang="EN-US",
+        ),
+    )
+    return res.json()["translations"][0]["text"]
+
+
+def to_romaji(text: str) -> str:
+    result = kks.convert(text)
+    return " ".join(item["hepburn"] for item in result)
