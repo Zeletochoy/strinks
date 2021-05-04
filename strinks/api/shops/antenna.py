@@ -44,8 +44,7 @@ class AntennaAmerica(Shop):
             raise NotABeerError
         title = beer_item["title"].lower()[len(brewery_name) :]
         beer_name = title.split("/", 1)[0].strip()
-        if beer_name.endswith(" pack"):
-            print("pack")
+        if "pack" in beer_item.get("vendor", "").lower():
             raise NotABeerError
         price = beer_item["price_min"]
         image_url = beer_item["images_info"][0]["src"]
@@ -56,7 +55,7 @@ class AntennaAmerica(Shop):
             beer_name = beer_name[: -len(match.group(0)) - 1]
         else:
             page = requests.get(url).text
-            soup = BeautifulSoup(page)
+            soup = BeautifulSoup(page, features="html.parser")
             table = soup.find(id="PartsItemAttribute")
             if table is not None:
                 for row in table("tr"):
