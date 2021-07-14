@@ -81,6 +81,7 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
     from .digtheline import DigTheLine
     from .gbf import GoodBeerFaucets
     from .hopbuds import HopBuds
+    from .ibrew import IBrew
     from .ichigo import IchiGoIchiAle
     from .ohtsuki import Ohtsuki
     from .volta import Volta
@@ -95,6 +96,7 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
             DigTheLine,
             GoodBeerFaucets,
             HopBuds,
+            IBrew,
             IchiGoIchiAle,
             Ohtsuki,
             Volta,
