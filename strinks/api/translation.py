@@ -1,7 +1,14 @@
+import atexit
+import json
+from pathlib import Path
+
 import requests
 import pykakasi
 
 from .settings import DEEPL_API_KEY
+
+
+DEEPL_CACHE_PATH = Path(__file__).with_name("deepl_cache.json")
 
 
 BREWERY_JP_EN = {
@@ -57,7 +64,21 @@ def deepl_translate(text: str) -> str:
             target_lang="EN-US",
         ),
     )
-    return res.json()["translations"][0]["text"]
+    try:
+        translation = res.json()["translations"][0]["text"]
+        deepl_translate.cache[text] = translation
+    except Exception as e:
+        print(f"DeepL translation failed: {e}")
+        translation = text
+    return translation
+
+
+try:
+    with open(DEEPL_CACHE_PATH) as f:
+        deepl_translate.cache = json.load(f)
+except OSError:
+    deepl_translate.cache = {}
+atexit.register(lambda: json.dump(deepl_translate.cache, open(DEEPL_CACHE_PATH, "w")))
 
 
 def to_romaji(text: str) -> str:
