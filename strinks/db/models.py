@@ -1,13 +1,17 @@
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Type, TypeVar, Union
+from typing import Iterable, Iterator, Optional, Type, TypeVar, Union, TYPE_CHECKING
 
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from .tables import Beer, Offering, Shop
+from .tables import Beer, Offering, Shop, User
+
+
+if TYPE_CHECKING:
+    from ..api.untappd import UserInfo
 
 
 T = TypeVar("T")
@@ -33,6 +37,7 @@ class BeerDB:
         Beer.__table__.create(self.engine, checkfirst=True)
         Shop.__table__.create(self.engine, checkfirst=True)
         Offering.__table__.create(self.engine, checkfirst=True)
+        User.__table__.create(self.engine, checkfirst=True)
 
     def __del__(self):
         try:
@@ -172,3 +177,17 @@ class BeerDB:
             .filter(~Offering.beer_id.in_(valid_ids))
             .delete(synchronize_session=False)
         )
+
+    def create_user(self, user_info: "UserInfo") -> User:
+        user = User(
+            id=user_info.id,
+            user_name=user_info.user_name,
+            first_name=user_info.first_name,
+            last_name=user_info.last_name,
+            avatar_url=user_info.avatar_url,
+        )
+        self.session.add(user)
+        return user
+
+    def get_user(self, user_id: int) -> Optional[User]:
+        return self.session.query(User).filter_by(id=user_id).one_or_none()

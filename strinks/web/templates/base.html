@@ -30,6 +30,14 @@
           <nav class="mdl-navigation">
             <a class="mdl-navigation__link" href="/beers"><i class="fas fa-beer"></i> Beers</a>
             <a class="mdl-navigation__link" href="/shops"><i class="fas fa-store"></i> Shops</a>
+            {% if user is none %}
+            <a class="mdl-navigation__link" href="/login"><i class="fas fa-user"></i> Log in</a>
+            {% else %}
+            <span class="mdl-chip mdl-chip--contact">
+              <img class="mdl-chip__contact" src="{{user.avatar_url}}"></img>
+              <span class="mdl-chip__text">{{user.user_name}}</span>
+            </span>
+            {% endif %}
           </nav>
         </div>
       </header>

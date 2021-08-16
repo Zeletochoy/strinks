@@ -3,13 +3,14 @@ import logging
 import time
 from collections import deque
 from pathlib import Path
-from typing import Deque, Dict, Optional, Tuple
+from typing import Deque, Dict, Optional, Tuple, NamedTuple
 
 import attr
 import cloudscraper
 from bs4 import BeautifulSoup
 
 from .shops import ShopBeer
+from .settings import UNTAPPD_CLIENT_ID, UNTAPPD_CLIENT_SECRET
 
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,13 @@ CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
 MAX_REQ_PER_HOUR = 1000
 REQ_COOLDOWN = 5
 session = cloudscraper.create_scraper(allow_brotli=False)
+
+AUTH_REDIRECT_URL = "https://strinks.zeletochoy.fr/auth"
+UNTAPPD_OAUTH_URL = (
+    "https://untappd.com/oauth/authenticate/"
+    f"?client_id={UNTAPPD_CLIENT_ID}&response_type=code&redirect_url={AUTH_REDIRECT_URL}"
+)
+API_URL = "https://api.untappd.com/v4"
 
 
 @attr.s
@@ -117,3 +125,39 @@ class UntappdAPI:
             if res is not None:
                 return res, query
         return None
+
+
+def untappd_get_oauth_token(auth_code: str) -> str:
+    res = session.get("https://untappd.com/oauth/authorize/", params=dict(
+        client_id=UNTAPPD_CLIENT_ID,
+        client_secret=UNTAPPD_CLIENT_SECRET,
+        response_type="code",
+        redirect_url=AUTH_REDIRECT_URL,
+        code=auth_code,
+    ))
+    res.raise_for_status()
+    return res.json()["response"]["access_token"]
+
+
+class UserInfo(NamedTuple):
+    id: int
+    user_name: str
+    first_name: str
+    last_name: str
+    avatar_url: str
+
+
+def untappd_get_user_info(access_token: str) -> UserInfo:
+    res = session.get(API_URL + "/user/info", params=dict(
+        access_token=access_token,
+        compact="true",
+    ))
+    res.raise_for_status()
+    user_json = res.json()["response"]["user"]
+    return UserInfo(
+        id=user_json["id"],
+        user_name=user_json["user_name"],
+        first_name=user_json["first_name"],
+        last_name=user_json["last_name"],
+        avatar_url=user_json["user_avatar"],
+    )

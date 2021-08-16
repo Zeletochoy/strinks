@@ -63,3 +63,13 @@ class Offering(_Base):
     @price_per_ml.expression  # type: ignore[no-redef]
     def price_per_ml(self):
         return cast(self.price, Float) / cast(self.milliliters, Float)
+
+
+class User(_Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    user_name = Column(String, nullable=False)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    avatar_url = Column(String, nullable=False)
