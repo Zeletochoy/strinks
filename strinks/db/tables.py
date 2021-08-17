@@ -73,3 +73,4 @@ class User(_Base):
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     avatar_url = Column(String, nullable=False)
+    access_token = Column(String, nullable=False)

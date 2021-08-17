@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Type, TypeVar, Union, TYPE_CHECKING
+from typing import Iterable, Iterator, Optional, Type, TypeVar, Union, List, TYPE_CHECKING
 
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
@@ -185,9 +185,13 @@ class BeerDB:
             first_name=user_info.first_name,
             last_name=user_info.last_name,
             avatar_url=user_info.avatar_url,
+            access_token=user_info.access_token,
         )
         self.session.add(user)
         return user
 
     def get_user(self, user_id: int) -> Optional[User]:
         return self.session.query(User).filter_by(id=user_id).one_or_none()
+
+    def get_access_tokens(self) -> List[str]:
+        return [token for token, in self.session.query(User.access_token).all()]

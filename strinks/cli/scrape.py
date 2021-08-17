@@ -4,14 +4,14 @@ import click
 from sqlalchemy.exc import IntegrityError
 
 from strinks.api.shops import get_shop_map, Shop
-from strinks.api.untappd import UntappdAPI
+from strinks.api.untappd import UntappdClient
 from strinks.db import get_db, BeerDB
 
 
 SHOP_MAP = get_shop_map()
 
 
-def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdAPI, verbose: bool) -> None:
+def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -> None:
     found_ids: Set[int] = set()
     with db.commit_or_rollback():
         db_shop = shop.get_db_entry(db)
@@ -58,7 +58,6 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdAPI, verbose: bool) -> N
         db.remove_expired_offerings(db_shop, found_ids)
 
 
-
 @click.command()
 @click.option(
     "-d",
@@ -75,7 +74,7 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
     else:
         shops = [SHOP_MAP[shop_name]()]
 
-    untappd = UntappdAPI()
+    untappd = UntappdClient()
     db = get_db(database)
 
     for shop in shops:
