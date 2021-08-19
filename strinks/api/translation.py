@@ -9,6 +9,12 @@ from .settings import DEEPL_API_KEY
 
 
 DEEPL_CACHE_PATH = Path(__file__).with_name("deepl_cache.json")
+try:
+    with open(DEEPL_CACHE_PATH) as f:
+        DEEPL_CACHE = json.load(f)
+except OSError:
+    DEEPL_CACHE = {}
+atexit.register(lambda: json.dump(DEEPL_CACHE, open(DEEPL_CACHE_PATH, "w")))
 
 
 BREWERY_JP_EN = {
@@ -58,6 +64,8 @@ def has_japanese(text: str) -> bool:
 
 
 def deepl_translate(text: str) -> str:
+    if text in DEEPL_CACHE:
+        return text
     res = requests.get(
         "https://api-free.deepl.com/v2/translate",
         params=dict(
@@ -70,19 +78,11 @@ def deepl_translate(text: str) -> str:
     )
     try:
         translation = res.json()["translations"][0]["text"]
-        deepl_translate.cache[text] = translation
+        DEEPL_CACHE[text] = translation
     except Exception as e:
         print(f"DeepL translation failed: {e}")
         translation = text
     return translation
-
-
-try:
-    with open(DEEPL_CACHE_PATH) as f:
-        deepl_translate.cache = json.load(f)
-except OSError:
-    deepl_translate.cache = {}
-atexit.register(lambda: json.dump(deepl_translate.cache, open(DEEPL_CACHE_PATH, "w")))
 
 
 def to_romaji(text: str) -> str:
