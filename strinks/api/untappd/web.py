@@ -64,7 +64,7 @@ class UntappdWeb:
                 raise RateLimitError()
             soup = BeautifulSoup(res.text, "html.parser")
             item = soup.find("div", class_="beer-item")
-            beer = self._item_to_beer(item)
+            beer: Optional[UntappdBeerResult] = self._item_to_beer(item)
         except (AttributeError, KeyError, IndexError, ValueError):
             beer = None
         except Exception:
