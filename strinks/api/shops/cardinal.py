@@ -40,7 +40,10 @@ class Cardinal(Shop):
         price_text = page_soup.find("span", class_="product__price").get_text().strip().lower()
         price = int(float(price_text[1:].replace(",", "")) * 1.1)
         qty_label = page_soup.find("label", class_="variant__button-label").get_text().strip().lower()
-        ml = int(re.search(r"(\d{3,4})ml", qty_label).group(1))
+        ml_match = re.search(r"(\d{3,4})ml", qty_label)
+        if ml_match is None:
+            raise NotABeerError
+        ml = int(ml_match.group(1))
         image_url = "https:" + page_soup.find("div", class_="product-image-main").find("img")["data-photoswipe-src"]
         try:
             return ShopBeer(

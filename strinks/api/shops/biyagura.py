@@ -24,10 +24,10 @@ class Biyagura(Shop):
         brewery_name = "Ise Kadoya"
         price = int(page_soup.find("span", class_="fs-c-price__value").get_text().strip().replace(",", ""))
         desc = page_soup.find("div", class_="p_box_left").get_text().strip().lower()
-        try:
-            ml = int(re.search("([0-9]+)ml", desc).group(1))
-        except ValueError:
+        ml_match = re.search(r"([0-9]+)ml", desc)
+        if ml_match is None:
             raise NotABeerError
+        ml = int(ml_match.group(1))
         image_url = page_soup.find("div", class_="fs-c-productMainImage__image").find("img")["src"]
         return ShopBeer(
             raw_name=f"{brewery_name} {beer_name}",

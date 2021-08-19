@@ -48,17 +48,20 @@ class IchiGoIchiAle(Shop):
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         title = page_soup.find("h2", class_="product_name").get_text().strip()
-        try:
-            raw_name = re.search(r"[(（]([^）)]*)[）)]$", title).group(1).strip()
-        except AttributeError:  # no match
+        name_match = re.search(r"[(（]([^）)]*)[）)]$", title)
+        if name_match is None:
             raise NotABeerError
+        raw_name = name_match.group(1).strip()
         price_text = page_soup.find("span", class_="product_price").get_text().strip()
-        price = int(re.search(r"税込([0-9,]+)円", price_text).group(1).replace(",", ""))
-        desc = page_soup.find("div", class_="product_explain").get_text()
-        try:
-            ml = int(re.search(r"容量:(\d+)ml", desc.lower()).group(1))
-        except AttributeError:
+        price_match = re.search(r"税込([0-9,]+)円", price_text)
+        if price_match is None:
             raise NotABeerError
+        price = int(price_match.group(1).replace(",", ""))
+        desc = page_soup.find("div", class_="product_explain").get_text()
+        ml_match = re.search(r"容量:(\d+)ml", desc.lower())
+        if ml_match is None:
+            raise NotABeerError
+        ml = int(ml_match.group(1))
         image_url = page_soup.find("img", class_="product_img_main_img")["src"]
         try:
             return ShopBeer(

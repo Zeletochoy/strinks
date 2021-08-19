@@ -35,7 +35,7 @@ class ShopBeer:
         if brewery is not None and self.beer_name is not None:
             clean_name = f"{brewery} {self.beer_name}"
             yield clean_name
-            translated_brewery = BREWERY_JP_EN.get(self.brewery_name)
+            translated_brewery = BREWERY_JP_EN.get(brewery)
             if translated_brewery is not None:
                 clean_name = f"{translated_brewery} {self.beer_name}"
                 brewery = translated_brewery
@@ -87,7 +87,7 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
     from .volta import Volta
 
     return {
-        cls.short_name: cls
+        cls.short_name: cls  # type: ignore
         for cls in (
             AntennaAmerica,
             Biyagura,

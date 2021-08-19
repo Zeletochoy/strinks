@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Union
 
 import requests
 
@@ -28,7 +28,7 @@ class UntappdAPI:
     def __repr__(self) -> str:
         return str(self)
 
-    def api_request(self, uri: str, **params: dict) -> dict:
+    def api_request(self, uri: str, **params: Union[str, int]) -> dict:
         if self.rate_limited_until > datetime.now():
             raise RateLimitError()
         res = requests.get(

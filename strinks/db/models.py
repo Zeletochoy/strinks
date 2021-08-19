@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, Type, TypeVar, Union, List, TYPE_CHECKING
 
@@ -109,9 +110,9 @@ class BeerDB:
             name=name,
             brewery=brewery,
             style=style,
-            abv=abv,
-            ibu=ibu,
-            rating=rating,
+            abv=Decimal(abv),
+            ibu=Decimal(ibu),
+            rating=Decimal(rating),
             updated_at=datetime.now(),
         )
         self.session.add(beer)
@@ -165,10 +166,11 @@ class BeerDB:
             .order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc())
             .distinct()
             .limit(n)
+            .all()
         )
 
     def get_shops(self) -> Iterator[Shop]:
-        return self.session.query(Shop)
+        return self.session.query(Shop).all()
 
     def remove_expired_offerings(self, shop: Shop, valid_ids: Iterable[int]) -> None:
         (

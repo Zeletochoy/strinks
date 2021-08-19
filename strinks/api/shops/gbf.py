@@ -68,7 +68,10 @@ class GoodBeerFaucets(Shop):
                 except ValueError:
                     raise NotABeerError
         desc = page_soup.find("div", class_="product_exp").get_text().strip().split("\n", 1)[0]
-        ml = int(re.search(r"([0-9]+)ml", desc.lower()).group(1))
+        ml_match = re.search(r"([0-9]+)ml", desc.lower())
+        if ml_match is None:
+            raise NotABeerError
+        ml = int(ml_match.group(1))
         image_url = page_soup.find("div", class_="product_image_main").find("img")["src"]
         try:
             return ShopBeer(

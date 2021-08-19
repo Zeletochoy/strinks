@@ -18,13 +18,13 @@ class Chouseiya(Shop):
             "mode": "",
             "category_id": "",
             "name": "",
-            "disp_number": 50,
-            "orderby": 2,
+            "disp_number": "50",
+            "orderby": "2",
         }
 
         while True:
             url = "https://www.chouseiya-beer.com/products/list"
-            page = requests.get(url, params={**params, "pageno": i}).text
+            page = requests.get(url, params={**params, "pageno": str(i)}).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 

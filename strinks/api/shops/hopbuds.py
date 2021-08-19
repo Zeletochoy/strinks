@@ -39,7 +39,10 @@ class HopBuds(Shop):
         raw_name = f"{brewery_name} {beer_name}"
         price = int(page_soup.find(id="ProductPrice").get_text().strip()[1:].replace(",", ""))
         desc = page_soup.find("div", class_="rte").get_text().strip()
-        ml = int(re.search(r"(\d{3,4})ml", desc).group(1))
+        ml_match = re.search(r"(\d{3,4})ml", desc)
+        if ml_match is None:
+            raise NotABeerError
+        ml = int(ml_match.group(1))
         image_url = "https:" + page_soup.find(id="ProductPhotoImg")["src"]
         try:
             return ShopBeer(

@@ -7,7 +7,7 @@ from typing import Dict, Optional, Tuple
 import attr
 
 from .api import UntappdAPI
-from .auth import UserInfo, untappd_get_oauth_token, untappd_get_user_info
+from .auth import UserInfo, untappd_get_oauth_token, untappd_get_user_info, UNTAPPD_OAUTH_URL
 from .structs import UntappdBeerResult, RateLimitError
 from .web import UntappdWeb
 from ..shops import ShopBeer
@@ -24,11 +24,11 @@ class UntappdClient:
             # TODO: expire cache
             with open(CACHE_PATH) as f:
                 json_cache = json.load(f)
-            self.cache = {
+            self.cache: Dict[str, Optional[UntappdBeerResult]] = {
                 query: UntappdBeerResult(**res) if res is not None else None for query, res in json_cache.items()
             }
         except Exception:
-            self.cache: Dict[str, UntappdBeerResult] = {}
+            self.cache = {}
         self.init_backends()
 
     def init_backends(self):
@@ -71,12 +71,15 @@ class UntappdClient:
     def try_find_beer(self, beer: ShopBeer) -> Optional[Tuple[UntappdBeerResult, str]]:
         """Returns result and used query if found or None otherwise"""
         for query in beer.iter_untappd_queries():
-            if self.cache.get(query) is not None:
-                return self.cache[query], query
+            if query in self.cache:
+                cached_beer = self.cache[query]
+                if cached_beer is not None:
+                    return cached_beer, query
+                continue
             res = self._query_beer(query)
+            self.cache[query] = res
+            self.save_cache()  # TODO: maybe not every time...
             if res is not None:
-                self.cache[query] = res
-                self.save_cache()  # TODO: maybe not every time...
                 return res, query
         return None
 
@@ -87,4 +90,5 @@ __all__ = [
     "untappd_get_oauth_token",
     "untappd_get_user_info",
     "UntappdClient",
+    "UNTAPPD_OAUTH_URL",
 ]

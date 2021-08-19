@@ -74,10 +74,10 @@ class AntennaAmerica(Shop):
                     raise NotABeerError
             else:
                 desc = soup.find("div", class_="product-single__description").get_text().lower()
-                try:
-                    ml = int(re.search(r"(\d{3,4})ml", desc).group(1))
-                except (ValueError, AttributeError):
+                ml_match = re.search(r"(\d{3,4})ml", desc)
+                if ml_match is None:
                     raise NotABeerError
+                ml = int(ml_match.group(1))
         return ShopBeer(
             beer_name=beer_name,
             brewery_name=brewery_name,

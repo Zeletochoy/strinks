@@ -23,7 +23,7 @@ def offerings():
     style_ids = [int(i) for i in style_ids_str.split(",")] if style_ids_str else None
     enabled_styles = get_styles_by_ids(style_ids) if style_ids else None
 
-    beers = db.get_best_cospa(TOP_N, value_factor, shop_id=shop_id, styles=enabled_styles).all()
+    beers = db.get_best_cospa(TOP_N, value_factor, shop_id=shop_id, styles=enabled_styles)
     shops = db.get_shops()
     user_id = request.cookies.get(USER_ID_COOKIE, None)
     user = db.get_user(int(user_id)) if user_id is not None else None
@@ -43,7 +43,7 @@ def offerings():
 @app.route("/shops")
 def shops():
     db = get_db()
-    shops = db.get_shops().all()
+    shops = db.get_shops()
     return render_template("shops.html", shops=shops)
 
 
