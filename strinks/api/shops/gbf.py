@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from . import NotABeerError, Shop, ShopBeer
 
 
 DIGITS = set("0123456789")

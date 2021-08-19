@@ -3,7 +3,6 @@ from typing import Iterator, Tuple
 
 import requests
 from bs4 import BeautifulSoup
-from unidecode import unidecode
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
