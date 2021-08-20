@@ -118,6 +118,9 @@ class BeerDB:
         self.session.add(beer)
         return beer
 
+    def get_beer(self, beer_id: int) -> Optional[Beer]:
+        return self.session.query(Beer).filter_by(beer_id=beer_id).one_or_none()
+
     def insert_offering(
         self,
         shop: Shop,

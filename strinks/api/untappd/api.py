@@ -7,6 +7,7 @@ import requests
 from .auth import get_untappd_api_auth_params
 from .structs import UntappdBeerResult, RateLimitError
 from ..settings import UNTAPPD_CLIENT_ID
+from ...db import get_db
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ class UntappdAPI:
     def __init__(self, auth_token: Optional[str] = None):
         self.auth_token = auth_token
         self.rate_limited_until = datetime.now()
+        self.db = get_db()
 
     def __str__(self) -> str:
         auth = f"{self.auth_token[:5]}..." if self.auth_token else "APP"
@@ -52,7 +54,23 @@ class UntappdAPI:
         results = res_json["response"]["beers"]["items"]
         if not results:
             return None
-        return self.get_beer(results[0]["beer"]["bid"])
+        beer_id = results[0]["beer"]["bid"]
+        return self._get_beer_from_db(beer_id) or self.get_beer(beer_id)
+
+    def _get_beer_from_db(self, beer_id: int) -> Optional[UntappdBeerResult]:
+        beer = self.db.get_beer(beer_id)
+        if beer is None:
+            return None
+        return UntappdBeerResult(
+            beer_id=beer.beer_id,
+            image_url=beer.image_url,
+            name=beer.name,
+            brewery=beer.brewery,
+            style=beer.style,
+            abv=beer.abv,
+            ibu=beer.ibu,
+            rating=beer.rating,
+        )
 
     def get_beer(self, beer_id: int) -> UntappdBeerResult:
         res_json = self.api_request(f"/beer/info/{beer_id}", compact="enhanced", ratingEnhanced="true")
