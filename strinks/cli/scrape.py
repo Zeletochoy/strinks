@@ -81,6 +81,7 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
         print(f"Scraping {shop.display_name}")
         try:
             scrape_shop(shop, db, untappd, verbose)
-        except Exception as e:
-            print(f"Error: {e}")
+        except Exception:
+            from traceback import format_exc
+            print(f"Error: {format_exc()}")
     print("Done.")
