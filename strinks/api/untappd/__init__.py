@@ -46,7 +46,7 @@ class UntappdClient:
     def current_backend(self):
         return self.backends[self.backend_idx]
 
-    def next_backend(self) -> None:
+    def next_backend(self, index: Optional[int] = None) -> None:
         self.backend_idx = (self.backend_idx + 1) % len(self.backends)
         print(f"Switching Untappd backend to {self.current_backend}")
         if self.backend_idx == 0:
@@ -62,6 +62,8 @@ class UntappdClient:
             json.dump(json_cache, f, ensure_ascii=False)
 
     def _query_beer(self, query: str) -> Optional[UntappdBeerResult]:
+        if (datetime.now() - self.last_time_at_first).total_seconds() > 3600:  # rate limit resets every hour
+            self.backend_idx = 0
         while True:
             try:
                 return self.current_backend.try_find_beer(query)
