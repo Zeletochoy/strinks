@@ -21,13 +21,18 @@ class Biyagura(Shop):
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         beer_name = page_soup.find("span", class_="fs-c-productNameHeading__name").get_text().strip()
+        beer_name = beer_name.replace("【 得 】", "")
         brewery_name = "Ise Kadoya"
         price = int(page_soup.find("span", class_="fs-c-price__value").get_text().strip().replace(",", ""))
-        desc = page_soup.find("div", class_="p_box_left").get_text().strip().lower()
-        ml_match = re.search(r"([0-9]+)ml", desc)
-        if ml_match is None:
-            raise NotABeerError
-        ml = int(ml_match.group(1))
+        desc_elt = page_soup.find("div", class_="p_box_left")
+        if desc_elt is None:  # images as description...
+            ml = 330  # pretty sure they only do that anyway
+        else:
+            desc = page_soup.find("div", class_="p_box_left").get_text().strip().lower()
+            ml_match = re.search(r"([0-9]+)ml", desc)
+            if ml_match is None:
+                raise NotABeerError
+            ml = int(ml_match.group(1))
         image_url = page_soup.find("div", class_="fs-c-productMainImage__image").find("img")["src"]
         return ShopBeer(
             raw_name=f"{brewery_name} {beer_name}",
