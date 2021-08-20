@@ -43,9 +43,8 @@ class UntappdAPI:
         elif res.status_code != 200:
             self.rate_limited_until = datetime.now() + REQ_COOLDOWN
             raise RateLimitError()
-        res.raise_for_status()
         res_json = res.json()
-        if res_json.get("meta", {}).get("http_code", 200) != 200:
+        if res_json.get("meta", {}).get("code", 200) != 200:
             raise RateLimitError()
         return res_json
 
