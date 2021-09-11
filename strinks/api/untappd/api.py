@@ -5,6 +5,7 @@ from typing import Optional, Union
 import requests
 
 from .auth import get_untappd_api_auth_params
+from .rank import best_match
 from .structs import UntappdBeerResult, RateLimitError
 from ..settings import UNTAPPD_CLIENT_ID
 from ...db import get_db
@@ -49,11 +50,15 @@ class UntappdAPI:
         return res_json
 
     def try_find_beer(self, query: str) -> Optional[UntappdBeerResult]:
-        res_json = self.api_request("/search/beer", q=query, limit=1)
+        res_json = self.api_request("/search/beer", q=query, limit=10)
         results = res_json["response"]["beers"]["items"]
         if not results:
             return None
-        beer_id = results[0]["beer"]["bid"]
+        beer_names = [
+            f"{result['brewery']['brewery_name']} {result['beer']['beer_name']}"
+            for result in results
+        ]
+        beer_id = results[best_match(query, beer_names)]["beer"]["bid"]
         return self._get_beer_from_db(beer_id) or self.get_beer(beer_id)
 
     def _get_beer_from_db(self, beer_id: int) -> Optional[UntappdBeerResult]:
@@ -66,9 +71,9 @@ class UntappdAPI:
             name=beer.name,
             brewery=beer.brewery,
             style=beer.style,
-            abv=beer.abv,
-            ibu=beer.ibu,
-            rating=beer.rating,
+            abv=float(beer.abv or "nan"),
+            ibu=float(beer.ibu or "nan"),
+            rating=float(beer.rating or "nan"),
         )
 
     def get_beer(self, beer_id: int) -> UntappdBeerResult:

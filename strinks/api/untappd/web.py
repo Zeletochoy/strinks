@@ -6,6 +6,7 @@ from typing import Deque, Optional
 import cloudscraper
 from bs4 import BeautifulSoup
 
+from .rank import best_match
 from .structs import UntappdBeerResult, RateLimitError
 
 
@@ -63,8 +64,10 @@ class UntappdWeb:
             if res.status_code >= 300:
                 raise RateLimitError()
             soup = BeautifulSoup(res.text, "html.parser")
-            item = soup.find("div", class_="beer-item")
-            beer: Optional[UntappdBeerResult] = self._item_to_beer(item)
+            items = soup("div", class_="beer-item")
+            beers = [self._item_to_beer(item) for item in items]
+            best_idx = best_match(query, (f"{beer.brewery} {beer.name}" for beer in beers))
+            beer: Optional[UntappdBeerResult] = beers[best_idx]
         except (AttributeError, KeyError, IndexError, ValueError):
             beer = None
         except Exception:

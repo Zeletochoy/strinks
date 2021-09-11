@@ -11,15 +11,16 @@ setup(
     packages=find_packages(),
     license="beerware",
     install_requires=[
+        "Flask>=1.1.2",
         "attrs>=20.2.0",
         "beautifulsoup4>=4.9.2",
         "click>=6.7",
         "cloudscraper>=1.2.48",
-        "Flask>=1.1.2",
+        "editdistance>=0.5.3",
         "pykakasi>=2.0.8",
         "requests>=2.24.0",
-        "sqlalchemy>=1.3.19",
         "sqlalchemy-stubs>=0.3",
+        "sqlalchemy>=1.3.19",
         "unidecode>=1.1.1",
     ],
     entry_points={
