@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, make_response, redirect
 
-from ..api.styles import STYLES, get_styles_by_ids
+from ..api.styles import get_styles_by_ids, GROUPED_STYLES_WITH_IDS, STYLES
 from ..api.untappd import untappd_get_oauth_token, untappd_get_user_info, UNTAPPD_OAUTH_URL
 from ..db import get_db
 
@@ -34,8 +34,8 @@ def offerings():
         shops=shops,
         shop_id=shop_id,
         value_factor=value_factor,
-        styles=STYLES,
-        enabled_styles=set(style_ids) if style_ids else None,
+        grouped_styles=GROUPED_STYLES_WITH_IDS,
+        enabled_styles=list(set(style_ids) if style_ids else range(len(STYLES))),
         user=user,
     )
 
