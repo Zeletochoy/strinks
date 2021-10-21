@@ -38,19 +38,13 @@
     text-decoration: none;
 }
 
-.mdl-list__item--two-line {
-    height: auto;
-    padding-top: 4px;
-    padding-bottom: 4px;
-}
-
-.mdl-menu__item {
-    line-height: unset;
-    height: auto
-}
-
 #style-menu {
     position: absolute;
     z-index: 42;
     background-color: white;
+}
+
+.treejs .treejs-nodes {
+    padding-left: 10px !important;
+    margin-top: 0px;
 }
