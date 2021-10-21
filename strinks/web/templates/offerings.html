@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/js/tree.min.js"></script>
 <script src="/static/js/offerings.js"></script>
 <script src="/static/js/styles.js"></script>
 <script defer src="/static/js/getmdl-select.min.js"></script>
@@ -53,30 +54,25 @@
           <li class="mdl-menu__item" data-val="12"{% if value_factor == 12 %} data-selected="true"{% endif %}>
             High Class
           </li>
-          <li class="mdl-menu__item" data-val="10000"{% if value_factor == 10000 %} data-selected="true"{% endif %}>
+          <li class="mdl-menu__item" data-val="99999999999"{% if value_factor == 99999999999 %} data-selected="true"{% endif %}>
             I Spare No Expense
           </li>
         </ul>
       </div>
     </div>
     <!--Styles-->
-    <div class="mdl-cell mdl-cell--1-col"> <!-- style="display: none">-->
+    <div class="mdl-cell mdl-cell--1-col">
       <input type="hidden" value="" name="styles" id="styles-input">
-      <button id="menu-styles" type="button" class="mdl-button mdl-js-button mdl-button--raised">
+      <button id="styles-button" type="button" class="mdl-button mdl-js-button mdl-button--raised" onclick="toggleStyleMenu(); event.stopPropagation()">
         Styles
       </button>
-      <ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" for="menu-styles">
-        {% for style in styles %}
-        <li class="mdl-menu__item style-item" onclick="event.stopPropagation()">
-          <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="style-{{loop.index0}}" onclick="event.stopPropagation()">
-            <input type="checkbox" id="style-{{loop.index0}}" style-id="{{loop.index0}}"
-                   class="mdl-checkbox__input style-checkbox" onclick="event.stopPropagation()"
-                   {% if not enabled_styles or loop.index0 in enabled_styles %}checked{%endif%}>
-            <span class="mdl-checkbox__label" onclick="event.stopPropagation()">{{style}}</span>
-          </label>
-        </li>
-        {% endfor %}
-      </ul>
+      <div id="style-menu" class="mdl-shadow--2dp hidden">
+        <div>
+          <a onclick="selectAllStyles()">Select all</a> /
+          <a onclick="clearAllStyles()">Clear</a>
+        </div>
+        <div id="style-tree"></div>
+      </div>
     </div>
     <!--Submit-->
     <div class="mdl-cell mdl-cell--1-col">
@@ -102,6 +98,13 @@
     lazyLoading: true
   });
   window.lazySizes.init();
+  (function () {
+    initStyleTree(
+      '#style-tree',
+      {{grouped_styles|tojson|safe}},
+      {{enabled_styles|tojson|safe}},
+    );
+  })();
 </script>
 
 

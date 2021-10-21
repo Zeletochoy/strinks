@@ -48,3 +48,9 @@
     line-height: unset;
     height: auto
 }
+
+#style-menu {
+    position: absolute;
+    z-index: 42;
+    background-color: white;
+}
