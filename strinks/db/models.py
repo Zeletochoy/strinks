@@ -148,7 +148,13 @@ class BeerDB:
         return offering
 
     def get_best_cospa(
-        self, n: int, value_factor: float = 8, shop_id: Optional[int] = None, styles: Optional[Iterable[str]] = None
+        self,
+        n: int,
+        value_factor: float = 8,
+        shop_id: Optional[int] = None,
+        styles: Optional[Iterable[str]] = None,
+        min_price: Optional[int] = None,
+        max_price: Optional[int] = None,
     ) -> Iterator[Beer]:
         def beer_value(rating, cost):
             return (value_factor ** rating) / cost
@@ -157,6 +163,11 @@ class BeerDB:
         conn.create_function("beer_value", 2, beer_value)
 
         query = self.session.query(Beer).join(Offering)
+
+        if min_price is not None:
+            query = query.filter(Offering.price >= min_price)
+        if max_price is not None:
+            query = query.filter(Offering.price <= max_price)
 
         if shop_id is not None:
             query = query.join(Shop).filter_by(shop_id=shop_id)
