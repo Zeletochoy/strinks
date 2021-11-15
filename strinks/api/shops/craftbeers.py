@@ -32,7 +32,8 @@ class CraftBeers(Shop):
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         try:
-            raw_name = page_soup.find("a")["href"][1:].rstrip(".html").replace("-", " ")
+            raw_name = page_soup.find("a")["href"][1:].rstrip(".html").replace("-", " ").replace("_", " ")
+            raw_name = re.sub(r" \d*can$", "", raw_name.lower())
             image_url = "https://www.craftbeers.jp" + page_soup.find("img")["src"]
             buy_box = page_soup.find("dl", class_="boxdl")
             desc = buy_box.find("dt").get_text().strip().lower()
