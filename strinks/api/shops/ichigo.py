@@ -7,19 +7,10 @@ from bs4 import BeautifulSoup
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .utils import keep_until_japanese
 
 
 DIGITS = set("0123456789")
-
-
-def keep_until_japanese(text: str) -> str:
-    chars = []
-    for c in text:
-        if ord(c) < 0x3000:  # first japanese characters
-            chars.append(c)
-        else:
-            break
-    return "".join(chars)
 
 
 class IchiGoIchiAle(Shop):

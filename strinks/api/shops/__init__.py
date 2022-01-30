@@ -75,6 +75,7 @@ class Shop(ABC):
 
 def get_shop_map() -> Dict[str, Type[Shop]]:
     from .antenna import AntennaAmerica
+    from .beerzilla import Beerzilla
     from .biyagura import Biyagura
     from .cardinal import Cardinal
     from .chouseiya import Chouseiya
@@ -93,6 +94,7 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
         cls.short_name: cls  # type: ignore
         for cls in (
             AntennaAmerica,
+            Beerzilla,
             Biyagura,
             Cardinal,
             Chouseiya,
