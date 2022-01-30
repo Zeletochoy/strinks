@@ -42,7 +42,9 @@ class AntennaAmerica(Shop):
         brewery_name = beer_item["product_type"].lower()
         if not brewery_name:
             raise NotABeerError
-        title = beer_item["title"].lower()[len(brewery_name) :]
+        title = beer_item["title"].lower()
+        title = re.sub("【[^】]*】", "", title)
+        title = title[len(brewery_name) :]
         beer_name = title.split("/", 1)[0].strip()
         if "pack" in beer_item.get("vendor", "").lower():
             raise NotABeerError
