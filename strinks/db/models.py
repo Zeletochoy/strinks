@@ -162,7 +162,7 @@ class BeerDB:
         conn = self.engine.raw_connection()
         conn.create_function("beer_value", 2, beer_value)
 
-        query = self.session.query(Beer).join(Offering)
+        query = self.session.query(Beer).join(Offering).filter(Offering.price != 0)
 
         if min_price is not None:
             query = query.filter(Offering.price >= min_price)
