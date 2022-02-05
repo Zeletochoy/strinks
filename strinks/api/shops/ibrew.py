@@ -2,14 +2,10 @@ from datetime import date
 from typing import Iterator
 
 import requests
-from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from . import Shop, ShopBeer
-
-
-GRADE_PRICES = (1749, 1419, 1089, 759)
 
 
 class IBrew(Shop):
@@ -23,6 +19,13 @@ class IBrew(Shop):
         self.url = (
           f"https://craftbeerbar-ibrew.com/ebisu-menu/wp-json/beer/v1/graded_taps/{day.year}/{day.month}/{day.day}/"
         )
+        self.prices = {}
+
+    def _get_grade_price(self, grade: str) -> int:
+        return self.prices[grade[0]]
+
+    def _set_grade_prices(self, api_json: dict) -> None:
+        self.prices = {name[0]: grade["pint"] for name, grade in api_json["prices"].items() if name != "tax"}
 
     def _parse_beer(self, tap_json: dict) -> Iterator[ShopBeer]:
         brewery_name = tap_json.get("brewer")
@@ -31,7 +34,7 @@ class IBrew(Shop):
         if tap_json.get("special_price"):
             price = int(tap_json["special_price"])
         else:
-            price = GRADE_PRICES[int(tap_json.get("grade", 1)) - 1]
+            price = self._get_grade_price(tap_json["grade"])
         yield ShopBeer(
             raw_name=f"{brewery_name} {beer_name}",
             url=self.url,
@@ -44,7 +47,9 @@ class IBrew(Shop):
         )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
-        taps = requests.get(self.url).json().get("taps", {}).values()
+        api_json = requests.get(self.url).json()
+        self._set_grade_prices(api_json)
+        taps = api_json.get("taps", {}).values()
         for tap in taps:
             if tap.get("status") != "ontap":
                 continue
