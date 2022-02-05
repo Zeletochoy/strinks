@@ -3,7 +3,6 @@ from typing import Iterator, Tuple
 
 import requests
 from bs4 import BeautifulSoup
-from unidecode import unidecode
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
@@ -39,14 +38,18 @@ class DrinkUp(Shop):
         title = page_soup.find("h1", class_="item_name").get_text().strip()
         beer_name = title.split("／", 1)[-1]
         price_text = page_soup.find("p", class_="item_price").get_text()
-        price = int(re.search(r"\d+", price_text.replace(",", "")).group(0))
+        price_match = re.search(r"\d+", price_text.replace(",", ""))
+        if price_match is not None:
+            price = int(price_match.group(0))
         desc_text = page_soup.find("div", class_="main_content_result_item_list_detail").get_text()
         ml_match = re.search(r"Volume (\d+)mL", desc_text)
-        ml = int(ml_match.group(1))
+        if ml_match is not None:
+            ml = int(ml_match.group(1))
         brewery_match = re.search("醸造所:.*/([^\n]*)", desc_text)
-        brewery_name = brewery_match.group(1)
-        brewery_name = re.sub(r"( (Beer|Brewery) )?Co\.", "", brewery_name)
-        raw_name = f"{brewery_name} {beer_name}"
+        if brewery_match is not None:
+            brewery_name = brewery_match.group(1)
+            brewery_name = re.sub(r"( (Beer|Brewery) )?Co\.", "", brewery_name)
+            raw_name = f"{brewery_name} {beer_name}"
         image_url = page_soup.find("div", class_="gallery_image_carousel").find("img")["src"]
         try:
             return ShopBeer(

@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-from .utils import keep_until_japanese
 
 
 DIGITS = set("0123456789")

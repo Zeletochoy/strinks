@@ -1,5 +1,5 @@
 import re
-from typing import Iterator, Tuple
+from typing import Iterator
 from urllib.parse import urlparse, urlunparse
 
 import requests
@@ -51,7 +51,8 @@ class Beerzilla(Shop):
         url = page_json["url"]
         desc = page_json["description"]
         match = re.search(r"([0-9０-９]+)(ml|ｍｌ)", desc.lower())
-        ml = int(match.group(1))
+        if match is not None:
+            ml = int(match.group(1))
         try:
             return ShopBeer(
                 raw_name=raw_name,

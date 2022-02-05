@@ -37,7 +37,9 @@ class CraftBeers(Shop):
             image_url = "https://www.craftbeers.jp" + page_soup.find("img")["src"]
             buy_box = page_soup.find("dl", class_="boxdl")
             desc = buy_box.find("dt").get_text().strip().lower()
-            ml = int(re.search(r"(\d+)ml", desc).group(1))
+            ml_match = re.search(r"(\d+)ml", desc)
+            if ml_match is not None:
+                ml = int(ml_match.group(1))
             price = int(buy_box.find("span", class_="bold").get_text().replace(",", "").replace("￥", ""))
         except AttributeError:
             raise NotABeerError
