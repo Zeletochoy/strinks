@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Iterator
 
 import requests
@@ -13,13 +13,22 @@ class IBrew(Shop):
     display_name = "IBrew"
 
     def __init__(self, location="ebisu", day=None):
+        self.location = location
         if day is None:
             day = date.today()
-        self.location = location
-        self.url = (
-          f"https://craftbeerbar-ibrew.com/ebisu-menu/wp-json/beer/v1/graded_taps/{day.year}/{day.month}/{day.day}/"
-        )
+        self.day = day
         self.prices = {}
+        self._set_urls()
+
+    def _set_urls(self) -> None:
+        self.json_url = (
+            f"https://craftbeerbar-ibrew.com/{self.location}-menu/wp-json/beer/v1/"
+            f"graded_taps/{self.day.year}/{self.day.month}/{self.day.day}/"
+        )
+        self.html_url = (
+            f"https://craftbeerbar-ibrew.com/{self.location}-menu/beermenu/"
+            f"{self.day.year}年{self.day.month}月{self.day.day}日-ビールメニュー/"
+        )
 
     def _get_grade_price(self, grade: str) -> int:
         return self.prices[grade[0]]
@@ -37,7 +46,7 @@ class IBrew(Shop):
             price = self._get_grade_price(tap_json["grade"])
         yield ShopBeer(
             raw_name=f"{brewery_name} {beer_name}",
-            url=self.url,
+            url=self.html_url,
             brewery_name=brewery_name,
             beer_name=beer_name,
             milliliters=470,
@@ -47,7 +56,11 @@ class IBrew(Shop):
         )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
-        api_json = requests.get(self.url).json()
+        api_json = requests.get(self.json_url).json()
+        if not api_json["taps"]:  # no taplist yet, try previous day
+            self.day -= timedelta(days=1)
+            self._set_urls()
+            api_json = requests.get(self.json_url).json()
         self._set_grade_prices(api_json)
         taps = api_json.get("taps", {}).values()
         for tap in taps:
