@@ -67,6 +67,7 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
         print(f"- {beer.brewery} - {beer.name}: {offering.price}¥ ({offering.milliliters}mL)")
     with db.commit_or_rollback():
         db.remove_expired_offerings(db_shop, found_ids)
+    return ScrapeSummary(num_found, num_untappd)
 
 
 @click.command()
