@@ -91,17 +91,19 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
 
     summary = {}
 
-    for shop in shops:
-        print(f"Scraping {shop.display_name}")
-        try:
-            shop_summary = scrape_shop(shop, db, untappd, verbose)
-            summary[shop.display_name] = str(shop_summary)
-        except Exception:
-            from traceback import format_exc
-            formatted = f"Error: {format_exc()}"
-            summary[shop.display_name] = formatted
-            print(formatted)
-    print("" * 10, "Summary", "=" * 10)
-    for shop_name, summary_str in summary.items():
-        print(f"- {shop_name}: {summary_str}")
+    try:
+        for shop in shops:
+            print(f"Scraping {shop.display_name}")
+            try:
+                shop_summary = scrape_shop(shop, db, untappd, verbose)
+                summary[shop.display_name] = str(shop_summary)
+            except Exception:
+                from traceback import format_exc
+                formatted = f"Error: {format_exc()}"
+                summary[shop.display_name] = formatted
+                print(formatted)
+    finally:
+        print("=" * 10, "Summary", "=" * 10)
+        for shop_name, summary_str in summary.items():
+            print(f"- {shop_name}: {summary_str}")
     print("Done.")
