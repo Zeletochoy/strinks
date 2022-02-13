@@ -79,6 +79,6 @@ class DigTheLine(Shop):
         return db.insert_shop(
             name=self.display_name,
             url="https://dig-the-line-store.com/",
-            image_url="https://shinpuhkan.jp/en/wp-content/uploads/sites/2/2020/03/gourmet_img_digtheline01.jpg",
+            image_url="https://cdn.shopify.com/s/files/1/0278/9189/2329/t/9/assets/logo.svg?v=2361053580776563633",
             shipping_fee=1210,
         )

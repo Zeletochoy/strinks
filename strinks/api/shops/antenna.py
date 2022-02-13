@@ -108,6 +108,6 @@ class AntennaAmerica(Shop):
         return db.insert_shop(
             name=self.display_name,
             url="https://www.antenna-america.com/",
-            image_url="https://www.antenna-america.com/img/cache/5c8b665f-0054-4741-94eb-1052c0a8b503.png",
+            image_url="https://cdn.shopify.com/s/files/1/0464/5673/3857/files/5c8b665f-0054-4741-94eb-1052c0a8b503_180x.png?v=1599641216",
             shipping_fee=990,
         )
