@@ -44,7 +44,7 @@ class Maruho(Shop):
 
     def _parse_beer_page(self, page_json) -> ShopBeer:
         title = page_json["title"].strip().lower()
-        title_match = re.search(r"^([^ ]+) *([0-9]{2,3})ml */ *(.*)$", title)
+        title_match = re.search(r"^([^ ]+) *([0-9]{3,4})ml */ *(.*)$", title)
         if title_match is None:
             raise NotABeerError
         beer_name = title_match.group(1)
