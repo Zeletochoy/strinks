@@ -50,7 +50,7 @@ class IBrew(Shop):
             brewery_name=brewery_name,
             beer_name=beer_name,
             milliliters=470,
-            price=price,
+            price=int(round(price * 1.1)),  # tax
             quantity=1,
             image_url=image_url,
         )
