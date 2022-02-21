@@ -184,7 +184,7 @@ class BeerDB:
         )
 
     def get_shops(self) -> Iterator[Shop]:
-        return self.session.query(Shop).all()
+        return self.session.query(Shop).order_by(Shop.name).all()
 
     def remove_expired_offerings(self, shop: Shop, valid_ids: Iterable[int]) -> None:
         (
