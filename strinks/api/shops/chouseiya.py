@@ -32,6 +32,8 @@ class Chouseiya(Shop):
             raise NoBeersError
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
+        if page_soup.find("p", class_="soldout") is not None:
+            raise NotABeerError
         info = page_soup.find("div", id="itemInfo")
         title = info.find("h2").get_text().strip().lower()
         title_match = re.search(r"【(.*?)(?:\([^)]+\))?/(.*?)(?:\([^)]+\))?】", title)
@@ -84,8 +86,8 @@ class Chouseiya(Shop):
     def get_db_entry(self, db: BeerDB) -> DBShop:
         return db.insert_shop(
             name=self.display_name,
-            url="https://www.chouseiya-beer.com/",
-            image_url="https://www.chouseiya-beer.com/html/template/default/img/common/header_logo.png",
-            shipping_fee=900,
-            free_shipping_over=10000,
+            url="https://beer-chouseiya.shop",
+            image_url="https://shop20-makeshop.akamaized.net/shopimages/chouseiya/logo.png",
+            shipping_fee=790,
+            free_shipping_over=15000,
         )
