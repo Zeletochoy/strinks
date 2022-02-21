@@ -1,3 +1,4 @@
+import re
 from typing import Iterator, Tuple
 
 import requests
@@ -14,24 +15,16 @@ class Chouseiya(Shop):
 
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
-        params = {
-            "mode": "",
-            "category_id": "",
-            "name": "",
-            "disp_number": "50",
-            "orderby": "2",
-        }
-
         while True:
-            url = "https://www.chouseiya-beer.com/products/list"
-            page = requests.get(url, params={**params, "pageno": str(i)}).text
+            url = f"https://beer-chouseiya.shop/shopbrand/all_items/page{i}"
+            page = requests.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
     def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:
         empty = True
-        for item in page_soup("div", class_="product_item"):
-            url = item.find("a")["href"]
+        for item in page_soup("div", class_="innerBox"):
+            url = "https://beer-chouseiya.shop" + item.find("a")["href"]
             page = requests.get(url).text
             yield BeautifulSoup(page, "html.parser"), url
             empty = False
@@ -39,24 +32,31 @@ class Chouseiya(Shop):
             raise NoBeersError
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
-        title = page_soup.find("h3", class_="item_name").get_text().strip()
-        try:
-            beer_name, brewery_name = title[1:].split("」", 1)
-        except ValueError:
+        info = page_soup.find("div", id="itemInfo")
+        title = info.find("h2").get_text().strip().lower()
+        title_match = re.search(r"【(.*?)(?:\([^)]+\))?/(.*?)(?:\([^)]+\))?】", title)
+        if title_match is None:
             raise NotABeerError
-        beer_name = beer_name.split("※", 1)[0]
-        brewery_name = brewery_name.split("※", 1)[0]
-        price = int(page_soup.find("span", class_="price02_default").get_text().strip().replace(",", "")[len("¥ ") :])
-        desc = page_soup.find(id="detail_not_stock_box__description_detail").get_text().strip()
-        try:
-            ml = int(desc.split("\n", 1)[0].rsplit("/", 1)[-1][: -len("ml")])
-        except ValueError:
+        beer_name = title_match.group(1)
+        brewery_name = title_match.group(2)
+        price_str = info.find("tr", id="M_usualValue").get_text().strip().lower()
+        price_match = re.search(r"([0-9,]+)円", price_str)
+        if price_match is None:
             raise NotABeerError
-        image_src = page_soup.find(id="item_photo_area").find("img")["src"]
-        image_url = f"https://www.chouseiya-beer.com{image_src}"
+        price = int(price_match.group(1).replace(",", ""))
+        desc = page_soup.find("div", class_="detailTxt").get_text().strip().lower()
+        ml_match = re.search(r"/([0-9]+)ml", desc)
+        if ml_match is None:
+            raise NotABeerError
+        ml = int(ml_match.group(1))
+        image_href = page_soup.find("div", id="itemImg").find("a")["href"]
+        image_match = re.search(r"imageview\('(.*)'\)", image_href)
+        if image_match is None:
+            raise NotABeerError
+        image_url = "https://shop20-makeshop.akamaized.net/shopimages/chouseiya/" + image_match.group(1)
         try:
             return ShopBeer(
-                raw_name=title,
+                raw_name=f"{brewery_name} {beer_name}",
                 url=url,
                 brewery_name=brewery_name,
                 beer_name=beer_name,

@@ -18,7 +18,7 @@ atexit.register(lambda: json.dump(DEEPL_CACHE, open(DEEPL_CACHE_PATH, "w")))
 
 
 BREWERY_JP_EN = {
-    "Yマーケット": "Y.Market",
+    "yマーケット": "Y.Market",
     "うしとらブルワリー": "Ushitora",
     "うちゅうブルーイング": "Uchu Brewing",
     "やみぞ森林のビール": "Daigo Shinrinbussan",
@@ -33,6 +33,8 @@ BREWERY_JP_EN = {
     "キャプテンローレンス": "Captain Lawrence",
     "クルーリパブリック": "CREW Republic",
     "ストーン": "Stone",
+    "ソングバード": "Songbird",
+    "ディレイラ": "Derailleur",
     "ノーザンモンク": "Northern Monk",
     "ノースアイランドビール": "North Island Beer",
     "ビアへるん": "Beer Hearn",
@@ -53,6 +55,7 @@ BREWERY_JP_EN = {
     "ロコビア": "LOCOBEER",
     "ロストアビィ": "Lost Abbey",
     "ローデンバッハ": "Rodenbach",
+    "京都醸造": "Kyoto Brewing",
     "伊勢角屋麦酒": "Ise Kadoya",
     "反射炉ビヤ": "Hansharo",
     "城端麦酒": "Johana",
