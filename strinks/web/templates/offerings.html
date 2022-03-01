@@ -60,6 +60,11 @@
         </ul>
       </div>
     </div>
+    <!--Search-->
+    <div class="mdl-cell mdl-cell--2-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+      <input class="mdl-textfield__input" type="text" name="search" id="search-input" value={{search or ""}}>
+      <label class="mdl-textfield__label" for="search_input">Search</label>
+    </div>
     <!--Price-->
     <div class="mdl-textfield mdl-js-textfield mdl-cell mdl-cell--1-col">
       <input class="mdl-textfield__input" type="text" pattern="[0-9]*" name="min_price" id="min_price" value={{min_price or ""}}>

@@ -18,6 +18,7 @@ def offerings():
     db = get_db()
     shop_id = request.args.get("shop_id", default=None, type=int)
     value_factor = request.args.get("value_factor", default=8, type=float)
+    search = request.args.get("search", default=None, type=str)
     min_price = request.args.get("min_price", default=None, type=int)
     max_price = request.args.get("max_price", default=None, type=int)
 
@@ -28,6 +29,7 @@ def offerings():
     beers = db.get_best_cospa(
         TOP_N,
         value_factor,
+        search=search,
         min_price=min_price,
         max_price=max_price,
         shop_id=shop_id,
@@ -43,6 +45,7 @@ def offerings():
         shops=shops,
         shop_id=shop_id,
         value_factor=value_factor,
+        search=search,
         min_price=min_price,
         max_price=max_price,
         grouped_styles=GROUPED_STYLES_WITH_IDS,

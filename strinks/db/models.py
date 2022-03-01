@@ -4,9 +4,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, Type, TypeVar, Union, List, TYPE_CHECKING
 
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, or_
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy_utils import escape_like
 
 from .tables import Beer, Offering, Shop, User
 
@@ -151,6 +152,7 @@ class BeerDB:
         self,
         n: int,
         value_factor: float = 8,
+        search: Optional[str] = None,
         shop_id: Optional[int] = None,
         styles: Optional[Iterable[str]] = None,
         min_price: Optional[int] = None,
@@ -163,6 +165,13 @@ class BeerDB:
         conn.create_function("beer_value", 2, beer_value)
 
         query = self.session.query(Beer).join(Offering).filter(Offering.price != 0)
+
+        if search is not None:
+            like = f"%{escape_like(search)}%"
+            query = query.filter(or_(
+                Beer.name.ilike(like),
+                Beer.brewery.ilike(like),
+            ))
 
         if min_price is not None:
             query = query.filter(Offering.price >= min_price)

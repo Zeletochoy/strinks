@@ -20,6 +20,7 @@ setup(
         "pykakasi>=2.0.8",
         "requests>=2.24.0",
         "sqlalchemy-stubs>=0.3",
+        "sqlalchemy-utils>=0.38.2"
         "sqlalchemy>=1.3.19",
         "unidecode>=1.1.1",
     ],
