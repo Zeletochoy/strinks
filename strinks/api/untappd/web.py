@@ -1,24 +1,30 @@
 import time
 from collections import deque
-from pathlib import Path
+from datetime import datetime, timedelta
 from typing import Deque, Optional
 
 import cloudscraper
 from bs4 import BeautifulSoup
 
+from ...db import get_db
 from .rank import best_match
-from .structs import UntappdBeerResult, RateLimitError
+from .structs import RateLimitError, UntappdBeerResult
 
 
-CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
 MAX_REQ_PER_HOUR = 1000
 REQ_COOLDOWN = 5
+BEER_CACHE_TIME = timedelta(days=30)
 session = cloudscraper.create_scraper(allow_brotli=False)
 
 
 class UntappdWeb:
     def __init__(self):
         self.last_request_timestamps: Deque[float] = deque(maxlen=MAX_REQ_PER_HOUR)
+        self.headers = {
+            "Referer": "https://untappd.com/home",
+            "User-Agent": "Mozilla/5.0 (Linux) Gecko/20100101 Firefox/81.0",
+        }
+        self.db = get_db()
 
     def __str__(self) -> str:
         return "UntappdWeb()"
@@ -56,10 +62,7 @@ class UntappdWeb:
             res = session.get(
                 "https://untappd.com/search",
                 params={"q": query},
-                headers={
-                    "Referer": "https://untappd.com/home",
-                    "User-Agent": "Mozilla/5.0 (Linux) Gecko/20100101 Firefox/81.0",
-                },
+                headers=self.headers,
             )
             if res.status_code >= 300:
                 raise RateLimitError()
@@ -73,3 +76,38 @@ class UntappdWeb:
         except Exception:
             raise RateLimitError()
         return beer
+
+    def get_beer_from_id(self, beer_id: int) -> UntappdBeerResult:
+        return self._get_beer_from_db(beer_id) or self._query_beer(beer_id)
+
+    def _query_beer(self, beer_id: int) -> UntappdBeerResult:
+        self.rate_limit()
+        try:
+            res = session.get("https://untappd.com/beer/{beer_id}", headers=self.headers)
+            if res.status_code >= 300:
+                raise RateLimitError()
+            soup = BeautifulSoup(res.text, "html.parser")
+            item = soup.find("div", class_="content")
+            if item is None:
+                raise KeyError(f"Beer with ID {beer_id} not found on untappd")
+            beer = self._item_to_beer(item)
+        except Exception:
+            raise RateLimitError()
+        return beer
+
+    def _get_beer_from_db(self, beer_id: int) -> Optional[UntappdBeerResult]:
+        beer = self.db.get_beer(beer_id)
+        if beer is None or datetime.now() - beer.updated_at > BEER_CACHE_TIME:
+            if beer is not None:
+                print(f"Updating {beer}...")
+            return None
+        return UntappdBeerResult(
+            beer_id=beer.beer_id,
+            image_url=beer.image_url,
+            name=beer.name,
+            brewery=beer.brewery,
+            style=beer.style,
+            abv=float(beer.abv or "nan"),
+            ibu=float(beer.ibu or "nan"),
+            rating=float(beer.rating or "nan"),
+        )

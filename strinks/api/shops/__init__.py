@@ -6,7 +6,7 @@ import attr
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..translation import BREWERY_JP_EN, has_japanese, deepl_translate, to_romaji
+from ..translation import BREWERY_JP_EN, deepl_translate, has_japanese, to_romaji
 
 
 @attr.s

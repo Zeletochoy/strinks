@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from . import NotABeerError, NoBeersError, Shop, ShopBeer
+from . import NoBeersError, NotABeerError, Shop, ShopBeer
 
 
 class Goodbeer(Shop):

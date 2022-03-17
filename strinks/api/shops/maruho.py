@@ -23,10 +23,7 @@ class Maruho(Shop):
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
         while True:
-            url = (
-                "https://maruho.shop/collections/all"
-                f"?filter.v.availability=1&page={i}&sort_by=created-descending"
-            )
+            url = f"https://maruho.shop/collections/all?filter.v.availability=1&page={i}&sort_by=created-descending"
             page = requests.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1

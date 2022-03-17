@@ -2,8 +2,8 @@ import atexit
 import json
 from pathlib import Path
 
-import requests
 import pykakasi
+import requests
 
 from .settings import DEEPL_API_KEY
 

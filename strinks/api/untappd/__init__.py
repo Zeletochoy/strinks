@@ -1,35 +1,40 @@
+import atexit
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, NamedTuple, Optional, Tuple
 
-import attr
-
-from .api import UntappdAPI
-from .auth import UserInfo, untappd_get_oauth_token, untappd_get_user_info, UNTAPPD_OAUTH_URL
-from .structs import UntappdBeerResult, RateLimitError
-from .web import UntappdWeb
-from ..shops import ShopBeer
 from ...db import get_db
+from ..shops import ShopBeer
+from .api import UntappdAPI
+from .auth import UNTAPPD_OAUTH_URL, UserInfo, untappd_get_oauth_token, untappd_get_user_info
+from .structs import RateLimitError, UntappdBeerResult
+from .web import UntappdWeb
 
 
 CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
 MIN_SECS_BETWEEN_RESTARTS = 300  # 5min
+BEER_CACHE_TIME = timedelta(days=30)
+
+
+class UntappdCacheEntry(NamedTuple):
+    beer_id: Optional[int]
+    timestamp: int
 
 
 class UntappdClient:
     def __init__(self):
         try:
-            # TODO: expire cache
             with open(CACHE_PATH) as f:
                 json_cache = json.load(f)
-            self.cache: Dict[str, Optional[UntappdBeerResult]] = {
-                query: UntappdBeerResult(**res) if res is not None else None for query, res in json_cache.items()
+            self.cache: Dict[str, UntappdCacheEntry] = {
+                query: UntappdCacheEntry(*res) for query, res in json_cache.items()
             }
         except Exception:
             self.cache = {}
         self.init_backends()
+        atexit.register(self.save_cache, verbose=True)
 
     def init_backends(self):
         db = get_db()
@@ -56,14 +61,16 @@ class UntappdClient:
                 time.sleep(MIN_SECS_BETWEEN_RESTARTS - elapsed)
             self.last_time_at_first = datetime.now()
 
-    def save_cache(self):
-        json_cache = {query: attr.asdict(res) if res is not None else None for query, res in self.cache.items()}
+    def save_cache(self, verbose: bool = False) -> None:
+        if verbose:
+            print("Saving untappd cache...")
         with open(CACHE_PATH, "w") as f:
-            json.dump(json_cache, f, ensure_ascii=False)
+            json.dump(self.cache, f, ensure_ascii=False)
 
     def _query_beer(self, query: str) -> Optional[UntappdBeerResult]:
         if (datetime.now() - self.last_time_at_first).total_seconds() > 3600:  # rate limit resets every hour
             self.backend_idx = 0
+            self.last_time_at_first = datetime.now()
         while True:
             try:
                 return self.current_backend.try_find_beer(query)
@@ -73,14 +80,18 @@ class UntappdClient:
     def try_find_beer(self, beer: ShopBeer) -> Optional[Tuple[UntappdBeerResult, str]]:
         """Returns result and used query if found or None otherwise"""
         for query in beer.iter_untappd_queries():
-            if query in self.cache:
+            try:
                 cached_beer = self.cache[query]
-                if cached_beer is not None:
-                    return cached_beer, query
+                if (
+                    cached_beer.beer_id is not None
+                    and datetime.now() - datetime.fromtimestamp(cached_beer.timestamp) < BEER_CACHE_TIME
+                ):
+                    return self.current_backend.get_beer_from_id(cached_beer.beer_id), query
                 continue
+            except KeyError:
+                pass
             res = self._query_beer(query)
-            self.cache[query] = res
-            self.save_cache()  # TODO: maybe not every time...
+            self.cache[query] = UntappdCacheEntry(None if res is None else res.beer_id, datetime.now().timestamp())
             if res is not None:
                 return res, query
         return None

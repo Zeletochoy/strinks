@@ -2,8 +2,8 @@ from typing import Dict, Optional
 
 import requests
 
-from .structs import UserInfo
 from ..settings import UNTAPPD_CLIENT_ID, UNTAPPD_CLIENT_SECRET
+from .structs import UserInfo
 
 
 AUTH_REDIRECT_URL = "https://strinks.zeletochoy.fr/auth"
@@ -15,22 +15,28 @@ API_URL = "https://api.untappd.com/v4"
 
 
 def untappd_get_oauth_token(auth_code: str) -> str:
-    res = requests.get("https://untappd.com/oauth/authorize/", params=dict(
-        client_id=UNTAPPD_CLIENT_ID,
-        client_secret=UNTAPPD_CLIENT_SECRET,
-        response_type="code",
-        redirect_url=AUTH_REDIRECT_URL,
-        code=auth_code,
-    ))
+    res = requests.get(
+        "https://untappd.com/oauth/authorize/",
+        params=dict(
+            client_id=UNTAPPD_CLIENT_ID,
+            client_secret=UNTAPPD_CLIENT_SECRET,
+            response_type="code",
+            redirect_url=AUTH_REDIRECT_URL,
+            code=auth_code,
+        ),
+    )
     res.raise_for_status()
     return res.json()["response"]["access_token"]
 
 
 def untappd_get_user_info(access_token: str) -> UserInfo:
-    res = requests.get(API_URL + "/user/info", params=dict(
-        access_token=access_token,
-        compact="true",
-    ))
+    res = requests.get(
+        API_URL + "/user/info",
+        params=dict(
+            access_token=access_token,
+            compact="true",
+        ),
+    )
     res.raise_for_status()
     user_json = res.json()["response"]["user"]
     return UserInfo(

@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Type, TypeVar, Union, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, Iterator, List, Optional, Type, TypeVar, Union
 
 from sqlalchemy import create_engine, func, or_
 from sqlalchemy.orm import sessionmaker
@@ -159,7 +159,7 @@ class BeerDB:
         max_price: Optional[int] = None,
     ) -> Iterator[Beer]:
         def beer_value(rating, cost):
-            return (value_factor ** rating) / cost
+            return (value_factor**rating) / cost
 
         conn = self.engine.raw_connection()
         conn.create_function("beer_value", 2, beer_value)
@@ -168,10 +168,12 @@ class BeerDB:
 
         if search is not None:
             like = f"%{escape_like(search)}%"
-            query = query.filter(or_(
-                Beer.name.ilike(like),
-                Beer.brewery.ilike(like),
-            ))
+            query = query.filter(
+                or_(
+                    Beer.name.ilike(like),
+                    Beer.brewery.ilike(like),
+                )
+            )
 
         if min_price is not None:
             query = query.filter(Offering.price >= min_price)

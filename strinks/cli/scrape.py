@@ -1,11 +1,11 @@
-from typing import Optional, Set, NamedTuple
+from typing import NamedTuple, Optional, Set
 
 import click
 from sqlalchemy.exc import IntegrityError
 
-from strinks.api.shops import get_shop_map, Shop
+from strinks.api.shops import Shop, get_shop_map
 from strinks.api.untappd import UntappdClient
-from strinks.db import get_db, BeerDB
+from strinks.db import BeerDB, get_db
 
 
 SHOP_MAP = get_shop_map()
@@ -35,9 +35,7 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
         beer, query = res
         if verbose:
             print(
-                f"[Shop] '{offering.raw_name}' -> "
-                f"[Query] '{query}' -> "
-                f"[Untappd] '{beer.brewery} - {beer.name}'"
+                f"[Shop] '{offering.raw_name}' -> " f"[Query] '{query}' -> " f"[Untappd] '{beer.brewery} - {beer.name}'"
             )
         try:
             with db.commit_or_rollback():
@@ -99,6 +97,7 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
                 summary[shop.display_name] = str(shop_summary)
             except Exception:
                 from traceback import format_exc
+
                 formatted = f"Error: {format_exc()}"
                 summary[shop.display_name] = formatted
                 print(formatted)

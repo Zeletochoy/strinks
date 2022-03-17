@@ -290,8 +290,7 @@ STYLE_GROUPS = {
 STYLES = tuple({style: None for group in STYLE_GROUPS.values() for style in group})
 STYLE_IDS = {style: idx for idx, style in enumerate(STYLES)}
 GROUPED_STYLES_WITH_IDS = [
-    (group, [(style, STYLE_IDS[style]) for style in styles])
-    for group, styles in STYLE_GROUPS.items()
+    (group, [(style, STYLE_IDS[style]) for style in styles]) for group, styles in STYLE_GROUPS.items()
 ]
 
 

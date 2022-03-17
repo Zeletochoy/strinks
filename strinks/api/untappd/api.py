@@ -4,16 +4,17 @@ from typing import Optional, Union
 
 import requests
 
+from ...db import get_db
+from ..settings import UNTAPPD_CLIENT_ID
 from .auth import get_untappd_api_auth_params
 from .rank import best_match
-from .structs import UntappdBeerResult, RateLimitError
-from ..settings import UNTAPPD_CLIENT_ID
-from ...db import get_db
+from .structs import RateLimitError, UntappdBeerResult
 
 
 logger = logging.getLogger(__name__)
 
 REQ_COOLDOWN = timedelta(minutes=10)
+BEER_CACHE_TIME = timedelta(days=30)
 API_URL = "https://api.untappd.com/v4"
 USER_AGENT = f"Strinks ({UNTAPPD_CLIENT_ID})"
 
@@ -54,16 +55,18 @@ class UntappdAPI:
         results = res_json["response"]["beers"]["items"]
         if not results:
             return None
-        beer_names = [
-            f"{result['brewery']['brewery_name']} {result['beer']['beer_name']}"
-            for result in results
-        ]
+        beer_names = [f"{result['brewery']['brewery_name']} {result['beer']['beer_name']}" for result in results]
         beer_id = results[best_match(query, beer_names)]["beer"]["bid"]
-        return self._get_beer_from_db(beer_id) or self.get_beer(beer_id)
+        return self.get_beer_from_id(beer_id)
+
+    def get_beer_from_id(self, beer_id: int) -> UntappdBeerResult:
+        return self._get_beer_from_db(beer_id) or self._query_beer(beer_id)
 
     def _get_beer_from_db(self, beer_id: int) -> Optional[UntappdBeerResult]:
         beer = self.db.get_beer(beer_id)
-        if beer is None:
+        if beer is None or datetime.now() - beer.updated_at > BEER_CACHE_TIME:
+            if beer is not None:
+                print(f"Updating {beer}...")
             return None
         return UntappdBeerResult(
             beer_id=beer.beer_id,
@@ -76,7 +79,7 @@ class UntappdAPI:
             rating=float(beer.rating or "nan"),
         )
 
-    def get_beer(self, beer_id: int) -> UntappdBeerResult:
+    def _query_beer(self, beer_id: int) -> UntappdBeerResult:
         res_json = self.api_request(f"/beer/info/{beer_id}", compact="enhanced", ratingEnhanced="true")
         beer = res_json["response"]["beer"]
         return UntappdBeerResult(

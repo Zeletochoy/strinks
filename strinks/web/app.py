@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, make_response, redirect
+from flask import Flask, make_response, redirect, render_template, request
 
-from ..api.styles import get_styles_by_ids, GROUPED_STYLES_WITH_IDS, STYLES
-from ..api.untappd import untappd_get_oauth_token, untappd_get_user_info, UNTAPPD_OAUTH_URL
+from ..api.styles import GROUPED_STYLES_WITH_IDS, STYLES, get_styles_by_ids
+from ..api.untappd import UNTAPPD_OAUTH_URL, untappd_get_oauth_token, untappd_get_user_info
 from ..db import get_db
 
 
@@ -33,7 +33,7 @@ def offerings():
         min_price=min_price,
         max_price=max_price,
         shop_id=shop_id,
-        styles=enabled_styles
+        styles=enabled_styles,
     )
     shops = db.get_shops()
     user_id = request.cookies.get(USER_ID_COOKIE, None)
