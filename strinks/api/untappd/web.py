@@ -33,10 +33,11 @@ class UntappdWeb:
         return str(self)
 
     def rate_limit(self):
-        if len(self.last_request_timestamps) == MAX_REQ_PER_HOUR:
+        while len(self.last_request_timestamps) >= MAX_REQ_PER_HOUR:
             time_since_oldest = time.monotonic() - self.last_request_timestamps[0]
             if time_since_oldest < 3600:
                 time.sleep(3600 - time_since_oldest)
+            self.last_request_timestamps.popleft()
         if self.last_request_timestamps:
             time_since_last = time.monotonic() - self.last_request_timestamps[-1]
             if time_since_last < REQ_COOLDOWN:

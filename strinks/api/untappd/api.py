@@ -1,6 +1,7 @@
 import logging
+import time
 from datetime import datetime, timedelta
-from typing import Iterator, NamedTuple, Optional, Tuple, Union
+from typing import Iterator, Optional, Tuple, Union
 
 import requests
 
@@ -13,7 +14,8 @@ from .structs import FlavorTag, RateLimitError, UntappdBeerResult, UserRating
 
 logger = logging.getLogger(__name__)
 
-REQ_COOLDOWN = timedelta(minutes=10)
+REQUEST_COOLDOWN = timedelta(seconds=1)
+RATE_LIMIT_COOLDOWN = timedelta(minutes=10)
 BEER_CACHE_TIME = timedelta(days=30)
 API_URL = "https://api.untappd.com/v4"
 USER_AGENT = f"Strinks ({UNTAPPD_CLIENT_ID})"
@@ -24,6 +26,7 @@ class UntappdAPI:
         self.auth_token = auth_token
         self.rate_limited_until = datetime.now()
         self.db = get_db()
+        self.last_request_time = datetime.fromtimestamp(0)
 
     def __str__(self) -> str:
         auth = f"{self.auth_token[:5]}..." if self.auth_token else "APP"
@@ -33,17 +36,25 @@ class UntappdAPI:
         return str(self)
 
     def api_request(self, uri: str, **params: Union[str, int]) -> dict:
-        if self.rate_limited_until > datetime.now():
+        # Rate limit
+        now = datetime.now()
+        if self.rate_limited_until > now:
             raise RateLimitError()
+        time_since_last = now - self.last_request_time
+        remaining_seconds = (REQUEST_COOLDOWN - time_since_last).total_seconds()
+        if remaining_seconds > 0:
+            time.sleep(remaining_seconds)
+        self.last_request_time = now
+
         res = requests.get(
             API_URL + uri,
             params={**params, **get_untappd_api_auth_params(self.auth_token)},
             headers={"User-Agent": USER_AGENT},
         )
         if res.headers.get("X-Ratelimit-Remaining") == "0":
-            self.rate_limited_until = datetime.now() + REQ_COOLDOWN
+            self.rate_limited_until = datetime.now() + RATE_LIMIT_COOLDOWN
         elif res.status_code != 200:
-            self.rate_limited_until = datetime.now() + REQ_COOLDOWN
+            self.rate_limited_until = datetime.now() + RATE_LIMIT_COOLDOWN
             raise RateLimitError()
         res_json = res.json()
         if res_json.get("meta", {}).get("code", 200) != 200:
