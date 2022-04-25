@@ -1,6 +1,10 @@
 import sys
 from os import environ
 
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 try:
     DEEPL_API_KEY = environ["DEEPL_API_KEY"]

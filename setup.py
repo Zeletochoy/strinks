@@ -18,6 +18,7 @@ setup(
         "cloudscraper>=1.2.48",
         "editdistance>=0.5.3",
         "pykakasi>=2.0.8",
+        "python-dotenv>=0.19.2",
         "requests>=2.24.0",
         "sqlalchemy-stubs>=0.3",
         "sqlalchemy-utils>=0.38.2",
