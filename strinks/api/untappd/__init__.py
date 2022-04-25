@@ -3,13 +3,13 @@ import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, NamedTuple, Optional, Tuple
+from typing import Dict, Iterator, NamedTuple, Optional, Sequence, Tuple, Union
 
 from ...db import get_db
 from ..shops import ShopBeer
 from .api import UntappdAPI
 from .auth import UNTAPPD_OAUTH_URL, UserInfo, untappd_get_oauth_token, untappd_get_user_info
-from .structs import RateLimitError, UntappdBeerResult
+from .structs import RateLimitError, UntappdBeerResult, UserRating
 from .web import UntappdWeb
 
 
@@ -24,7 +24,7 @@ class UntappdCacheEntry(NamedTuple):
 
 
 class UntappdClient:
-    def __init__(self):
+    def __init__(self, *backends: Union[UntappdAPI, UntappdWeb]):
         try:
             with open(CACHE_PATH) as f:
                 json_cache = json.load(f)
@@ -33,14 +33,15 @@ class UntappdClient:
             }
         except Exception:
             self.cache = {}
-        self.init_backends()
+        self.init_backends(backends)
         atexit.register(self.save_cache, verbose=True)
 
-    def init_backends(self):
+    def init_backends(self, backends: Sequence[Union[UntappdAPI, UntappdWeb]]):
         db = get_db()
-        self.backends = [
+        self.backends = backends or [
+            *[UntappdAPI(auth_token=token) for token in db.get_access_tokens(is_app=True)],  # App user tokens
             UntappdAPI(),  # Strinks app credentials
-            *[UntappdAPI(auth_token=token) for token in db.get_access_tokens()],  # User tokens
+            *[UntappdAPI(auth_token=token) for token in db.get_access_tokens(is_app=False)],  # User tokens
             UntappdWeb(),  # Web scraper
         ]
         print(f"Untappd backends: {self.backends}")
@@ -79,17 +80,22 @@ class UntappdClient:
 
     def try_find_beer(self, beer: ShopBeer) -> Optional[Tuple[UntappdBeerResult, str]]:
         """Returns result and used query if found or None otherwise"""
+        if (datetime.now() - self.last_time_at_first).total_seconds() > 3600:  # rate limit resets every hour
+            self.backend_idx = 0
+            self.last_time_at_first = datetime.now()
         for query in beer.iter_untappd_queries():
-            try:
-                cached_beer = self.cache[query]
-                if (
-                    cached_beer.beer_id is not None
-                    and datetime.now() - datetime.fromtimestamp(cached_beer.timestamp) < BEER_CACHE_TIME
-                ):
-                    return self.current_backend.get_beer_from_id(cached_beer.beer_id), query
-                continue
-            except KeyError:
-                pass
+            query = query.strip().lower()
+            cached_beer = self.cache.get(query)
+            if (
+                cached_beer is not None
+                and cached_beer.beer_id is not None
+                and datetime.now() - datetime.fromtimestamp(cached_beer.timestamp) < BEER_CACHE_TIME
+            ):
+                while True:
+                    try:
+                        return self.current_backend.get_beer_from_id(cached_beer.beer_id), query
+                    except RateLimitError:
+                        self.next_backend()
             res = self._query_beer(query)
             self.cache[query] = UntappdCacheEntry(None if res is None else res.beer_id, datetime.now().timestamp())
             if res is not None:
