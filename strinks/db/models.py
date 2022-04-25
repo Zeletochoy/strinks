@@ -82,6 +82,10 @@ class BeerDB:
         if check_existence:
             shop = self.session.query(Shop).filter_by(name=name).first()
             if shop is not None:
+                shop.url = url
+                shop.image_url = image_url
+                shop.shipping_fee = shipping_fee
+                shop.free_shipping_over = free_shipping_over
                 return shop
         shop = Shop(
             name=name,
@@ -103,24 +107,40 @@ class BeerDB:
         abv: float,
         ibu: float,
         rating: float,
+        description: Optional[str] = None,
+        tags: Optional[Sequence[Tuple[FlavorTag, int]]] = None,
         check_existence: bool = True,
     ) -> Beer:
+        beer = None
         if check_existence:
             beer = self.session.query(Beer).filter_by(beer_id=beer_id).first()
             if beer is not None:
-                return beer
-        beer = Beer(
-            beer_id=beer_id,
-            image_url=image_url,
-            name=name,
-            brewery=brewery,
-            style=style,
-            abv=Decimal(abv),
-            ibu=Decimal(ibu),
-            rating=Decimal(rating),
-            updated_at=datetime.now(),
-        )
-        self.session.add(beer)
+                beer.image_url = image_url
+                beer.name = name
+                beer.brewery = brewery
+                beer.style = style
+                beer.abv = Decimal(abv)
+                beer.ibu = Decimal(ibu)
+                beer.rating = Decimal(rating)
+                beer.updated_at = datetime.now()
+                beer.description = description
+        if beer is None:
+            beer = Beer(
+                beer_id=beer_id,
+                image_url=image_url,
+                name=name,
+                brewery=brewery,
+                style=style,
+                abv=Decimal(abv),
+                ibu=Decimal(ibu),
+                rating=Decimal(rating),
+                updated_at=datetime.now(),
+                description=description,
+            )
+            self.session.add(beer)
+        if tags is not None:
+            for flavor_tag, count in tags:
+                beer.tags.append(BeerTag(beer_id=beer_id, tag_id=flavor_tag.tag_id, count=count))
         return beer
 
     def get_beer(self, beer_id: int) -> Optional[Beer]:
@@ -139,6 +159,11 @@ class BeerDB:
         if check_existence:
             offering = self.session.query(Offering).filter_by(shop_id=shop.shop_id, beer_id=beer.beer_id).first()
             if offering is not None:
+                offering.url = url
+                offering.milliliters = milliliters
+                offering.price = price
+                offering.image_url = image_url
+                offering.updated_at = datetime.now()
                 return offering
         offering = Offering(
             shop_id=shop.shop_id,
@@ -161,6 +186,7 @@ class BeerDB:
         styles: Optional[Iterable[str]] = None,
         min_price: Optional[int] = None,
         max_price: Optional[int] = None,
+        exclude_user_had: Optional[int] = None,  # user ID
     ) -> Iterator[Beer]:
         def beer_value(rating, cost):
             return (value_factor**rating) / cost
@@ -168,7 +194,7 @@ class BeerDB:
         conn = self.engine.raw_connection()
         conn.create_function("beer_value", 2, beer_value)
 
-        query = self.session.query(Beer).join(Offering).filter(Offering.price != 0)
+        query = self.session.query(Beer).filter(Beer.rating != 0).join(Offering).filter(Offering.price != 0)
 
         if search is not None:
             like = f"%{escape_like(search)}%"
