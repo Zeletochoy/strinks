@@ -219,8 +219,7 @@ class BeerDB:
             query = query.filter(~Beer.ratings.any(UserRating.user_id == exclude_user_had))
 
         return (
-            query
-            .order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc())
+            query.order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc())
             .distinct()
             .limit(n)
             .all()  # type: ignore

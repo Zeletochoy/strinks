@@ -1,6 +1,6 @@
 import re
 from abc import ABC, abstractmethod
-from typing import Dict, Iterator, Optional, Type
+from typing import Dict, Iterator, Optional, Set, Type
 
 import attr
 
@@ -29,7 +29,7 @@ class ShopBeer:
     def price_per_ml(self) -> float:
         return self.unit_price / self.milliliters
 
-    def iter_untappd_queries(self) -> Iterator[str]:
+    def _iter_untappd_queries(self) -> Iterator[str]:
         clean_name = ""
         brewery = self.brewery_name
         if brewery is not None and self.beer_name is not None:
@@ -58,6 +58,14 @@ class ShopBeer:
         if has_japanese(self.raw_name):
             yield to_romaji(self.raw_name)
             yield deepl_translate(self.raw_name)
+
+    def iter_untappd_queries(self) -> Iterator[str]:
+        seen: Set[str] = set()
+        for query in self._iter_untappd_queries():
+            query = query.lower().strip()
+            if query in seen:
+                continue
+            yield query
 
 
 class Shop(ABC):
