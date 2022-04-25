@@ -5,9 +5,9 @@ import attr
 
 
 class FlavorTag(NamedTuple):
-    id: int
+    tag_id: int
     name: str
-    count: str
+    count: int  # type: ignore
 
 
 @attr.s
@@ -25,7 +25,7 @@ class UntappdBeerResult:
 
 
 class UserInfo(NamedTuple):
-    id: int
+    user_id: int
     user_name: str
     first_name: str
     last_name: str

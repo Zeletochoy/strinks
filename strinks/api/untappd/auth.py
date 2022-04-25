@@ -43,7 +43,7 @@ def untappd_get_user_info(access_token: str) -> UserInfo:
     res.raise_for_status()
     user_json = res.json()["response"]["user"]
     return UserInfo(
-        id=user_json["id"],
+        user_id=user_json["id"],
         user_name=user_json["user_name"],
         first_name=user_json["first_name"],
         last_name=user_json["last_name"],

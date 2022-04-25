@@ -1,5 +1,5 @@
-from pathlib import Path
 from typing import Optional
+from pathlib import Path
 
 import click
 
@@ -17,10 +17,9 @@ from ..db import get_db
 )
 def cli(path: Optional[click.Path]):
     """Initializes the beer database"""
-    db_path = Path(path) if path is not None else None
-    print(f"Initializing {db_path}...")
+    print(f"Initializing {path}...")
     print("Creating tables...")
-    db = get_db(path, read_only=False)
+    db = get_db(str(path) if path is not None else None, read_only=False)
     print("Inserting shops:")
     with db.commit_or_rollback():
         for shop_cls in get_shop_map().values():

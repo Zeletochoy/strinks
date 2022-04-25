@@ -97,7 +97,7 @@ class UntappdClient:
                     except RateLimitError:
                         self.next_backend()
             res = self._query_beer(query)
-            self.cache[query] = UntappdCacheEntry(None if res is None else res.beer_id, datetime.now().timestamp())
+            self.cache[query] = UntappdCacheEntry(None if res is None else res.beer_id, int(datetime.now().timestamp()))
             if res is not None:
                 return res, query
         return None

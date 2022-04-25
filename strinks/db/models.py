@@ -1,6 +1,5 @@
 from contextlib import contextmanager
 from datetime import datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, TypeVar, Union
 
@@ -119,9 +118,9 @@ class BeerDB:
                 beer.name = name
                 beer.brewery = brewery
                 beer.style = style
-                beer.abv = Decimal(abv)
-                beer.ibu = Decimal(ibu)
-                beer.rating = Decimal(rating)
+                beer.abv = abv
+                beer.ibu = ibu
+                beer.rating = rating
                 beer.updated_at = datetime.now()
                 beer.description = description
         if beer is None:
@@ -131,9 +130,9 @@ class BeerDB:
                 name=name,
                 brewery=brewery,
                 style=style,
-                abv=Decimal(abv),
-                ibu=Decimal(ibu),
-                rating=Decimal(rating),
+                abv=abv,
+                ibu=ibu,
+                rating=rating,
                 updated_at=datetime.now(),
                 description=description,
             )
@@ -192,7 +191,7 @@ class BeerDB:
             return (value_factor**rating) / cost
 
         conn = self.engine.raw_connection()
-        conn.create_function("beer_value", 2, beer_value)
+        conn.create_function("beer_value", 2, beer_value)  # type: ignore
 
         query = self.session.query(Beer).filter(Beer.rating != 0).join(Offering).filter(Offering.price != 0)
 
@@ -219,10 +218,16 @@ class BeerDB:
         if exclude_user_had is not None:
             query = query.filter(~Beer.ratings.any(UserRating.user_id == exclude_user_had))
 
-        return query.order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc()).distinct().limit(n).all()
+        return (
+            query
+            .order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc())
+            .distinct()
+            .limit(n)
+            .all()  # type: ignore
+        )
 
     def get_shops(self) -> Iterator[Shop]:
-        return self.session.query(Shop).order_by(Shop.name).all()
+        return self.session.query(Shop).order_by(Shop.name).all()  # type: ignore
 
     def remove_expired_offerings(self, shop: Shop, valid_ids: Iterable[int]) -> None:
         (
@@ -234,7 +239,7 @@ class BeerDB:
 
     def create_user(self, user_info: "UserInfo") -> User:
         user = User(
-            id=user_info.id,
+            id=user_info.user_id,
             user_name=user_info.user_name,
             first_name=user_info.first_name,
             last_name=user_info.last_name,

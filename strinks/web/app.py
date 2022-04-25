@@ -17,7 +17,7 @@ USER_ID_COOKIE = "strinks_user_id"
 def offerings():
     db = get_db()
     shop_id = request.args.get("shop_id", default=None, type=int)
-    value_factor = request.args.get("value_factor", default=8, type=float)
+    value_factor = request.args.get("value_factor", default=8., type=float) or 8.
     search = request.args.get("search", default=None, type=str)
     min_price = request.args.get("min_price", default=None, type=int)
     max_price = request.args.get("max_price", default=None, type=int)
@@ -39,7 +39,7 @@ def offerings():
         max_price=max_price,
         shop_id=shop_id,
         styles=enabled_styles,
-        exclude_user_had=user_id if exclude_had else None,
+        exclude_user_had=user.id if exclude_had and user is not None else None,
     )
     shops = db.get_shops()
 
@@ -85,7 +85,7 @@ def auth():
     user_info = untappd_get_user_info(access_token)
     resp = make_response(redirect("/"))
     db = get_db()
-    user = db.get_user(user_info.id)
+    user = db.get_user(user_info.user_id)
     if user is None:
         with db.commit_or_rollback():
             user = db.create_user(user_info)

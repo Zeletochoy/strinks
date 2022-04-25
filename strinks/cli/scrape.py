@@ -86,7 +86,7 @@ def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool)
         shops = [SHOP_MAP[shop_name]()]
 
     untappd = UntappdClient()
-    db = get_db(database)
+    db = get_db(str(database) if database is not None else None)
 
     summary = {}
 
