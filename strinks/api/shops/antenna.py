@@ -51,7 +51,7 @@ class AntennaAmerica(Shop):
         price = beer_item["price_min"]
         image_url = beer_item["images_info"][0]["src"]
         url = f"https://www.antenna-america.com/en/collections/all/products/{beer_item['handle']}"
-        match = re.search(r"\((\d+)ml\)", title)
+        match = re.search(r"\((\d+)ml\)", beer_name)
         if match is not None:
             ml = int(match.group(1))
             beer_name = beer_name[: -len(match.group(0)) - 1]
