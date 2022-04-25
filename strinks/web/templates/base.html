@@ -33,9 +33,12 @@
             {% if user is none %}
             <a class="mdl-navigation__link" href="/login"><i class="fas fa-user"></i> Log in</a>
             {% else %}
-            <span class="mdl-chip mdl-chip--contact">
+            <span class="mdl-chip mdl-chip--contact mdl-chip--deletable">
               <img class="mdl-chip__contact" src="{{user.avatar_url}}"></img>
               <span class="mdl-chip__text">{{user.user_name}}</span>
+              <button type="button" class="mdl-chip__action"onclick=logout()>
+                <i class="fas fa-sign-out-alt"></i>
+              </button>
             </span>
             {% endif %}
           </nav>
