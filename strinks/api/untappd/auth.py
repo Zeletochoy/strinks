@@ -12,11 +12,13 @@ UNTAPPD_OAUTH_URL = (
     f"?client_id={UNTAPPD_CLIENT_ID}&response_type=code&redirect_url={AUTH_REDIRECT_URL}"
 )
 API_URL = "https://api.untappd.com/v4"
+HEADERS = {"User-Agent": f"Strinks ({UNTAPPD_CLIENT_ID})"}
 
 
 def untappd_get_oauth_token(auth_code: str) -> str:
     res = requests.get(
         "https://untappd.com/oauth/authorize/",
+        headers=HEADERS,
         params=dict(
             client_id=UNTAPPD_CLIENT_ID,
             client_secret=UNTAPPD_CLIENT_SECRET,
@@ -32,6 +34,7 @@ def untappd_get_oauth_token(auth_code: str) -> str:
 def untappd_get_user_info(access_token: str) -> UserInfo:
     res = requests.get(
         API_URL + "/user/info",
+        headers=HEADERS,
         params=dict(
             access_token=access_token,
             compact="true",
