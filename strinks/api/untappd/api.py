@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, Union
+from typing import Iterator, NamedTuple, Optional, Tuple, Union
 
 import requests
 
@@ -8,7 +8,7 @@ from ...db import get_db
 from ..settings import UNTAPPD_CLIENT_ID
 from .auth import get_untappd_api_auth_params
 from .rank import best_match
-from .structs import RateLimitError, UntappdBeerResult
+from .structs import FlavorTag, RateLimitError, UntappdBeerResult, UserRating
 
 
 logger = logging.getLogger(__name__)
@@ -77,11 +77,20 @@ class UntappdAPI:
             abv=float(beer.abv or "nan"),
             ibu=float(beer.ibu or "nan"),
             rating=float(beer.rating or "nan"),
+            description=beer.description,
+            tags={FlavorTag(assoc.tag.tag_id, assoc.tag.name, assoc.count) for assoc in beer.tags},
         )
 
     def _query_beer(self, beer_id: int) -> UntappdBeerResult:
         res_json = self.api_request(f"/beer/info/{beer_id}", compact="enhanced", ratingEnhanced="true")
         beer = res_json["response"]["beer"]
+
+        try:
+            tag_list = beer["flavor_profile"]["items"]
+            tags = {FlavorTag(tag["tag_id"], tag["tag_name"], tag["total_count"]) for tag in tag_list}
+        except KeyError:
+            tags = None
+
         return UntappdBeerResult(
             beer_id=beer["bid"],
             image_url=beer.get("beer_label_hd", beer["beer_label"]),
@@ -91,4 +100,39 @@ class UntappdAPI:
             abv=beer["beer_abv"],
             ibu=beer["beer_ibu"],
             rating=beer["rating_score"],
+            description=beer["beer_description"],
+            tags=tags,
         )
+
+    def iter_had_beers(
+        self, user_id: Optional[int] = None, from_time: Optional[datetime] = None
+    ) -> Iterator[Tuple[UntappdBeerResult, UserRating]]:
+        if from_time is None:
+            from_time = datetime.fromtimestamp(0)
+        from_formatted = from_time.strftime("%Y-%m-%d")
+        to_formatted = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        url = f"/user/beers/{user_id or ''}"
+        num_fetched = 0
+        while True:
+            res_json = self.api_request(
+                url, offset=num_fetched, limit=50, sort="date_asc", start_date=from_formatted, end_date=to_formatted
+            )
+            items = res_json["response"]["beers"]["items"]
+            for beer_json in items:
+                beer = UntappdBeerResult(
+                    beer_id=beer_json["beer"]["bid"],
+                    image_url=beer_json.get("beer_label_hd", beer_json["beer"]["beer_label"]),
+                    name=beer_json["beer"]["beer_name"],
+                    brewery=beer_json["brewery"]["brewery_name"],
+                    style=beer_json["beer"]["beer_style"],
+                    abv=beer_json["beer"]["beer_abv"],
+                    ibu=beer_json["beer"]["beer_ibu"],
+                    rating=beer_json["beer"]["rating_score"],
+                )
+                checkin_date_str = beer_json["recent_created_at"]
+                checkin_date = datetime.strptime(checkin_date_str, "%a, %d %b %Y %H:%M:%S %z")
+                rating = UserRating(beer_json["rating_score"], checkin_date)
+                yield beer, rating
+            num_fetched += len(items)
+            if len(items) < 50:
+                break

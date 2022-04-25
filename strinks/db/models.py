@@ -2,14 +2,15 @@ from contextlib import contextmanager
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Iterator, List, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 from sqlalchemy import create_engine, func, or_
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.sql.expression import desc
 from sqlalchemy_utils import escape_like
 
-from .tables import Beer, Offering, Shop, User
+from .tables import Beer, BeerTag, FlavorTag, Offering, Shop, User, UserRating
 
 
 if TYPE_CHECKING:
@@ -40,6 +41,9 @@ class BeerDB:
         Shop.__table__.create(self.engine, checkfirst=True)
         Offering.__table__.create(self.engine, checkfirst=True)
         User.__table__.create(self.engine, checkfirst=True)
+        UserRating.__table__.create(self.engine, checkfirst=True)
+        FlavorTag.__table__.create(self.engine, checkfirst=True)
+        BeerTag.__table__.create(self.engine, checkfirst=True)
 
     def __del__(self):
         try:
@@ -181,18 +185,15 @@ class BeerDB:
             query = query.filter(Offering.price <= max_price)
 
         if shop_id is not None:
-            query = query.join(Shop).filter_by(shop_id=shop_id)
+            query = query.filter_by(shop_id=shop_id)
 
         if styles is not None:
             query = query.filter(Beer.style.in_(styles))
 
-        return (
-            query.filter(Beer.rating != 0)
-            .order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc())
-            .distinct()
-            .limit(n)
-            .all()
-        )
+        if exclude_user_had is not None:
+            query = query.filter(~Beer.ratings.any(UserRating.user_id == exclude_user_had))
+
+        return query.order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc()).distinct().limit(n).all()
 
     def get_shops(self) -> Iterator[Shop]:
         return self.session.query(Shop).order_by(Shop.name).all()
@@ -220,5 +221,43 @@ class BeerDB:
     def get_user(self, user_id: int) -> Optional[User]:
         return self.session.query(User).filter_by(id=user_id).one_or_none()
 
-    def get_access_tokens(self) -> List[str]:
-        return [token for token, in self.session.query(User.access_token).all()]
+    def get_users(self) -> List[User]:
+        return self.session.query(User).all()
+
+    def get_latest_rating(self, user_id: int) -> Optional[UserRating]:
+        return (
+            self.session.query(UserRating)
+            .filter_by(user_id=user_id)
+            .order_by(desc(UserRating.updated_at))
+            .limit(1)
+            .one_or_none()
+        )
+
+    def insert_rating(
+        self,
+        beer_id: int,
+        user_id: int,
+        rating: float,
+        updated_at: datetime,
+        check_existence: bool = True,
+    ) -> UserRating:
+        if check_existence:
+            user_rating = self.session.query(UserRating).filter_by(beer_id=beer_id, user_id=user_id).first()
+            if user_rating is not None:
+                user_rating.rating = rating
+                user_rating.updated_at = updated_at
+                return user_rating
+        user_rating = UserRating(
+            beer_id=beer_id,
+            user_id=user_id,
+            rating=rating,
+            updated_at=updated_at,
+        )
+        self.session.add(user_rating)
+        return user_rating
+
+    def get_access_tokens(self, is_app: Optional[bool] = None) -> List[str]:
+        query = self.session.query(User.access_token)
+        if is_app is not None:
+            query = query.filter_by(is_app=is_app)
+        return [token for token, in query.all()]

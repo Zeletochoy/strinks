@@ -48,6 +48,7 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
                     abv=beer.abv,
                     ibu=beer.ibu,
                     rating=beer.rating,
+                    description=beer.description,
                 )
                 found_ids.add(beer.beer_id)
         except IntegrityError:

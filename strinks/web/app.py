@@ -21,10 +21,15 @@ def offerings():
     search = request.args.get("search", default=None, type=str)
     min_price = request.args.get("min_price", default=None, type=int)
     max_price = request.args.get("max_price", default=None, type=int)
+    exclude_had = request.args.get("exclude_had", default="", type=str) == "on"
 
     style_ids_str = request.args.get("styles", default="", type=str)
     style_ids = [int(i) for i in style_ids_str.split(",")] if style_ids_str else None
     enabled_styles = get_styles_by_ids(style_ids) if style_ids else None
+
+    user_id = request.cookies.get(USER_ID_COOKIE, None)
+    user = db.get_user(int(user_id)) if user_id is not None else None
+    user_ratings = {rating.beer.beer_id: rating.rating for rating in (user.ratings if user is not None else [])}
 
     beers = db.get_best_cospa(
         TOP_N,
@@ -34,10 +39,9 @@ def offerings():
         max_price=max_price,
         shop_id=shop_id,
         styles=enabled_styles,
+        exclude_user_had=user_id if exclude_had else None,
     )
     shops = db.get_shops()
-    user_id = request.cookies.get(USER_ID_COOKIE, None)
-    user = db.get_user(int(user_id)) if user_id is not None else None
 
     return render_template(
         "offerings.html",
@@ -51,6 +55,8 @@ def offerings():
         grouped_styles=GROUPED_STYLES_WITH_IDS,
         enabled_styles=list(set(style_ids) if style_ids else range(len(STYLES))),
         user=user,
+        user_ratings=user_ratings,
+        exclude_had=exclude_had,
     )
 
 

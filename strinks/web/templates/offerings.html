@@ -76,8 +76,20 @@
       <label class="mdl-textfield__label" for="max_price">¥ Max</label>
       <span class="mdl-textfield__error">That's not a number.</span>
     </div>
+    <!--Had-->
+    {% if user is not none %}
+    <div class="mdl-cell mdl-cell--1-col vertical-center shrink-width">
+      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="had-checkbox" id="had-label">
+        <input type="checkbox" name="exclude_had" id="had-checkbox" class="mdl-checkbox__input" {% if exclude_had %}checked{% endif %}>
+        <span class="mdl-checkbox__label"><i class="fas fa-comment-slash"></i></span>
+      </label>
+      <div class="mdl-tooltip" data-mdl-for="had-label">
+        Exclude beers you have checked in
+      </div>
+    </div>
+    {% endif %}
     <!--Styles-->
-    <div class="mdl-cell mdl-cell--1-col">
+    <div class="mdl-cell mdl-cell--1-col vertical-center shrink-width">
       <input type="hidden" value="" name="styles" id="styles-input">
       <button id="styles-button" type="button" class="mdl-button mdl-js-button mdl-button--raised" onclick="toggleStyleMenu(); event.stopPropagation()">
         Styles

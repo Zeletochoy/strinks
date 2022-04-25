@@ -1,6 +1,13 @@
-from typing import NamedTuple
+from datetime import datetime
+from typing import NamedTuple, Optional, Set
 
 import attr
+
+
+class FlavorTag(NamedTuple):
+    id: int
+    name: str
+    count: str
 
 
 @attr.s
@@ -13,6 +20,8 @@ class UntappdBeerResult:
     abv: float = attr.ib()
     ibu: float = attr.ib()
     rating: float = attr.ib()
+    description: Optional[str] = attr.ib(default=None)
+    tags: Optional[Set[FlavorTag]] = attr.ib(default=None)
 
 
 class UserInfo(NamedTuple):
@@ -26,3 +35,8 @@ class UserInfo(NamedTuple):
 
 class RateLimitError(RuntimeError):
     pass
+
+
+class UserRating(NamedTuple):
+    rating: float
+    updated_at: datetime

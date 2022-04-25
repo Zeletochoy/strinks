@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 from ...db import get_db
 from .rank import best_match
-from .structs import RateLimitError, UntappdBeerResult
+from .structs import FlavorTag, RateLimitError, UntappdBeerResult
 
 
 MAX_REQ_PER_HOUR = 1000
@@ -110,4 +110,5 @@ class UntappdWeb:
             abv=float(beer.abv or "nan"),
             ibu=float(beer.ibu or "nan"),
             rating=float(beer.rating or "nan"),
+            tags={FlavorTag(assoc.tag.tag_id, assoc.tag.name, assoc.count) for assoc in beer.tags},
         )

@@ -96,6 +96,12 @@ class UntappdClient:
                 return res, query
         return None
 
+    def iter_had_beers(
+        self, user_id: Optional[int] = None, from_time: Optional[datetime] = None
+    ) -> Iterator[Tuple[UntappdBeerResult, UserRating]]:
+        # TODO: multiple backends?
+        yield from self.current_backend.iter_had_beers(user_id=user_id, from_time=from_time)
+
 
 __all__ = [
     "UntappdBeerResult",

@@ -9,6 +9,9 @@
       {{beer.name}}
     </h2>
   </a>
+  {% if beer.beer_id in user_ratings %}
+  <div class="had-check"><i class="fas fa-check"></i></div>
+  {% endif %}
   <div class="mdl-card__supporting-text">
     <span class="mdl-chip">
       <span class="mdl-chip__text">{{beer.style}}</span>
@@ -26,6 +29,14 @@
     <span class="mdl-chip">
       <span class="mdl-chip__text"><i class="fab fa-untappd"></i> {{beer.rating|round(2)}}</span>
     </span>
+    {% if beer.beer_id in user_ratings %}
+    <span class="mdl-chip">
+      <span class="mdl-chip__text"><i class="fas fa-user"></i> {{user_ratings[beer.beer_id]|round(2)}}</span>
+    </span>
+    {% endif %}
+    {% for tag in beer.tag_names %}
+    <span class="mdl-badge" data-badge="{{tag}}"></span>
+    {% endfor %}
   </div>
   <div class="mdl-card__actions mdl-card--border">
     <ul class="demo-list-two mdl-list">
