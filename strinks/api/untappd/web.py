@@ -85,7 +85,7 @@ class UntappdWeb:
     def _query_beer(self, beer_id: int) -> UntappdBeerResult:
         self.rate_limit()
         try:
-            res = session.get("https://untappd.com/beer/{beer_id}", headers=self.headers)
+            res = session.get(f"https://untappd.com/beer/{beer_id}", headers=self.headers)
             if res.status_code >= 300:
                 raise RateLimitError()
             soup = BeautifulSoup(res.text, "html.parser")
