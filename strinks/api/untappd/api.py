@@ -51,9 +51,7 @@ class UntappdAPI:
             params={**params, **get_untappd_api_auth_params(self.auth_token)},
             headers={"User-Agent": USER_AGENT},
         )
-        if res.headers.get("X-Ratelimit-Remaining") == "0":
-            self.rate_limited_until = datetime.now() + RATE_LIMIT_COOLDOWN
-        elif res.status_code != 200:
+        if res.status_code != 200:
             self.rate_limited_until = datetime.now() + RATE_LIMIT_COOLDOWN
             raise RateLimitError()
         res_json = res.json()
