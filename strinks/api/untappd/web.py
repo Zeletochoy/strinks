@@ -69,12 +69,13 @@ class UntappdWeb:
                 raise RateLimitError()
             soup = BeautifulSoup(res.text, "html.parser")
             items = soup("div", class_="beer-item")
+            if not items:
+                return None
             beers = [self._item_to_beer(item) for item in items]
             best_idx = best_match(query, (f"{beer.brewery} {beer.name}" for beer in beers))
             beer: Optional[UntappdBeerResult] = beers[best_idx]
-        except (AttributeError, KeyError, IndexError, ValueError):
-            beer = None
-        except Exception:
+        except Exception as e:
+            print(f"Unexpected exception in UntappdWeb.try_find_beer: {e}")
             raise RateLimitError()
         return beer
 
