@@ -1,8 +1,7 @@
 from typing import Dict, Optional
 
-import requests
-
 from ..settings import UNTAPPD_CLIENT_ID, UNTAPPD_CLIENT_SECRET
+from ..utils import get_retrying_session
 from .structs import UserInfo
 
 
@@ -14,9 +13,11 @@ UNTAPPD_OAUTH_URL = (
 API_URL = "https://api.untappd.com/v4"
 HEADERS = {"User-Agent": f"Strinks ({UNTAPPD_CLIENT_ID})"}
 
+session = get_retrying_session()
+
 
 def untappd_get_oauth_token(auth_code: str) -> str:
-    res = requests.get(
+    res = session.get(
         "https://untappd.com/oauth/authorize/",
         headers=HEADERS,
         params=dict(
@@ -32,7 +33,7 @@ def untappd_get_oauth_token(auth_code: str) -> str:
 
 
 def untappd_get_user_info(access_token: str) -> UserInfo:
-    res = requests.get(
+    res = session.get(
         API_URL + "/user/info",
         headers=HEADERS,
         params=dict(

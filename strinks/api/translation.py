@@ -3,9 +3,12 @@ import json
 from pathlib import Path
 
 import pykakasi
-import requests
 
 from .settings import DEEPL_API_KEY
+from .utils import get_retrying_session
+
+
+session = get_retrying_session()
 
 
 DEEPL_CACHE_PATH = Path(__file__).with_name("deepl_cache.json")
@@ -76,7 +79,7 @@ def has_japanese(text: str) -> bool:
 def deepl_translate(text: str) -> str:
     if text in DEEPL_CACHE:
         return text
-    res = requests.get(
+    res = session.get(
         "https://api-free.deepl.com/v2/translate",
         params=dict(
             auth_key=DEEPL_API_KEY,

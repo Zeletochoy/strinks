@@ -1,11 +1,13 @@
 import re
 from typing import Iterator
 
-import requests
-
 from ...db.models import BeerDB
+from ..utils import get_retrying_session
 from ...db.tables import Shop as DBShop
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class Threefeet(Shop):
@@ -20,7 +22,7 @@ class Threefeet(Shop):
                 f"products?page={i}&per_page=180&sort_by=category_order&sort_order=asc&categories[]="
                 "11ec1ebe1a8b6fc0b14a86224c9e9feb&include=images,media_files&in_stock=1&excluded_fulfillment=dine_in"
             )
-            yield requests.get(url).json()
+            yield session.get(url).json()
             i += 1
 
     def _iter_page_beers(self, page_json: dict) -> Iterator[dict]:

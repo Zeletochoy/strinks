@@ -1,15 +1,17 @@
 import re
 from typing import Iterator, Tuple
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NotABeerError, Shop, ShopBeer
 
 
 DIGITS = set("0123456789")
+
+session = get_retrying_session()
 
 
 def keep_until_japanese(text: str) -> str:
@@ -30,7 +32,7 @@ class GoodBeerFaucets(Shop):
         i = 1
         while True:
             url = url_template.format(i)
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
@@ -49,7 +51,7 @@ class GoodBeerFaucets(Shop):
             if item.find("span", class_="prd_lst_soldout") is not None:
                 continue
             url = "https://gbfbottleshoppe.com/" + item.find("a")["href"]
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser"), url
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:

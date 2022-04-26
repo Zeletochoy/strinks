@@ -3,16 +3,16 @@ import time
 from datetime import datetime, timedelta
 from typing import Iterator, Optional, Tuple, Union
 
-import requests
-
 from ...db import get_db
 from ..settings import UNTAPPD_CLIENT_ID
+from ..utils import get_retrying_session
 from .auth import get_untappd_api_auth_params
 from .rank import best_match
 from .structs import FlavorTag, RateLimitError, UntappdBeerResult, UserRating
 
 
 logger = logging.getLogger(__name__)
+session = get_retrying_session()
 
 REQUEST_COOLDOWN = timedelta(seconds=1)
 RATE_LIMIT_COOLDOWN = timedelta(minutes=10)
@@ -46,7 +46,7 @@ class UntappdAPI:
             time.sleep(remaining_seconds)
         self.last_request_time = now
 
-        res = requests.get(
+        res = session.get(
             API_URL + uri,
             params={**params, **get_untappd_api_auth_params(self.auth_token)},
             headers={"User-Agent": USER_AGENT},
@@ -58,6 +58,7 @@ class UntappdAPI:
             raise RateLimitError()
         res_json = res.json()
         if res_json.get("meta", {}).get("code", 200) != 200:
+            self.rate_limited_until = datetime.now() + RATE_LIMIT_COOLDOWN
             raise RateLimitError()
         return res_json
 

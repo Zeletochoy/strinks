@@ -1,12 +1,15 @@
 import re
 from typing import Iterator
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class DigTheLine(Shop):
@@ -24,7 +27,7 @@ class DigTheLine(Shop):
                 f"&facetsShowUnavailableOptions=false&ResultsTitleStrings=2&ResultsDescriptionStrings=0&page={i+1}"
                 "&collection=beer&output=json&_=1605691567140"
             )
-            yield requests.get(url).json()
+            yield session.get(url).json()
             i += 1
 
     def _iter_page_beers(self, page_json: dict) -> Iterator[dict]:

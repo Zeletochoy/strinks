@@ -1,12 +1,15 @@
 import re
 from typing import Iterator, Tuple
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class CraftBeers(Shop):
@@ -14,11 +17,11 @@ class CraftBeers(Shop):
     display_name = "Craft Beers"
 
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
-        index = BeautifulSoup(requests.get("https://www.craftbeers.jp/").text, "html.parser")
+        index = BeautifulSoup(session.get("https://www.craftbeers.jp/").text, "html.parser")
         menu = index.find(id="categ")("div", class_="tabContainer")[1]
         for link in menu("a"):
             url = "https://www.craftbeers.jp" + link["href"]
-            page = requests.get(url).content.decode("utf8")
+            page = session.get(url).content.decode("utf8")
             yield BeautifulSoup(page, "html.parser")
 
     def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:

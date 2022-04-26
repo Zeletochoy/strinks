@@ -2,12 +2,15 @@ import re
 from typing import Iterator
 from urllib.parse import urlparse, urlunparse
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 def _get_json_url(beer_url: str) -> str:
@@ -24,7 +27,7 @@ class Maruho(Shop):
         i = 1
         while True:
             url = f"https://maruho.shop/collections/all?filter.v.availability=1&page={i}&sort_by=created-descending"
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
@@ -33,7 +36,7 @@ class Maruho(Shop):
         for product in page_soup("div", class_="product"):
             link = product.find("a", class_="product-link")
             url = _get_json_url("https://maruho.shop/" + link["href"])
-            page_json = requests.get(url).json()
+            page_json = session.get(url).json()
             yield page_json
             empty = False
         if empty:

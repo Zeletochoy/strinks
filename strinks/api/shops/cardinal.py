@@ -1,12 +1,15 @@
 import re
 from typing import Iterator, Tuple
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class Cardinal(Shop):
@@ -17,7 +20,7 @@ class Cardinal(Shop):
         i = 1
         while True:
             url = f"https://retail.cardinaltrading.jp/collections/beer?page={i}&sort_by=created-ascending"
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
@@ -25,7 +28,7 @@ class Cardinal(Shop):
         empty = True
         for item in page_soup("div", class_="grid-product"):
             url = "https://retail.cardinaltrading.jp" + item.find("a")["href"]
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser"), url
             empty = False
         if empty:

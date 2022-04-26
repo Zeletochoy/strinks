@@ -1,12 +1,15 @@
 import re
 from typing import Iterator, Tuple
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class Goodbeer(Shop):
@@ -17,7 +20,7 @@ class Goodbeer(Shop):
         page_num = 1
         while True:
             url = f"https://goodbeer.jp/shop/shopbrand.html?search=&prize1=&page={page_num}"
-            page = requests.get(url).text
+            page = session.get(url).text
             soup = BeautifulSoup(page, "html.parser")
             if soup.find("li", class_="next") is None:
                 break
@@ -29,7 +32,7 @@ class Goodbeer(Shop):
         for item in page_soup("dl", class_="search-item"):
             has_beers = True
             url = "https://goodbeer.jp/" + item.find("a")["href"]
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser"), url
         if not has_beers:
             raise NoBeersError

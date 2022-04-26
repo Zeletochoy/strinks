@@ -1,15 +1,17 @@
 import re
 from typing import Iterator, Tuple
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 
 
 DIGITS = set("0123456789")
+
+session = get_retrying_session()
 
 
 class IchiGoIchiAle(Shop):
@@ -20,7 +22,7 @@ class IchiGoIchiAle(Shop):
         i = 1
         while True:
             url = f"https://151l.shop/?mode=grp&gid=1978037&sort=n&page={i}"
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
@@ -30,7 +32,7 @@ class IchiGoIchiAle(Shop):
             if item.find("span", class_="item_soldout") is not None:
                 continue
             url = "https://151l.shop/" + item.find("a")["href"]
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser"), url
             empty = False
         if empty:

@@ -1,12 +1,15 @@
 import re
 from typing import Iterator, Tuple
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class DrinkUp(Shop):
@@ -17,7 +20,7 @@ class DrinkUp(Shop):
         i = 1
         while True:
             url = f"https://drinkuppers-ecshop.stores.jp/?page={i}"
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
@@ -28,7 +31,7 @@ class DrinkUp(Shop):
             title = item.find("p", class_="c-itemList__item-name").get_text().strip()
             if title.endswith("セット"):  # skip sets
                 continue
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser"), url
             empty = False
         if empty:

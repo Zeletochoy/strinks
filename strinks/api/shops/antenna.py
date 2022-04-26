@@ -2,15 +2,17 @@ import re
 import time
 from typing import Iterator
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 
 
 DIGITS = set("0123456789")
+
+session = get_retrying_session()
 
 
 class AntennaAmerica(Shop):
@@ -27,7 +29,7 @@ class AntennaAmerica(Shop):
                 "&collection_scope=226404991137&tag=&product_available=true&variant_available=true"
                 "&build_filter_tree=true&check_cache=false&sort_first=available&locale=ja&event_type=history"
             )
-            yield requests.get(url).json()
+            yield session.get(url).json()
             i += 1
 
     def _iter_page_beers(self, page_json: dict) -> Iterator[dict]:
@@ -56,7 +58,7 @@ class AntennaAmerica(Shop):
             ml = int(match.group(1))
             beer_name = beer_name[: -len(match.group(0)) - 1]
         else:
-            page = requests.get(url).text
+            page = session.get(url).text
             soup = BeautifulSoup(page, features="html.parser")
             table = soup.find(id="PartsItemAttribute")
             if table is not None:

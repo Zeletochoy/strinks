@@ -1,12 +1,15 @@
 import re
 from typing import Iterator, Tuple
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class Chouseiya(Shop):
@@ -17,7 +20,7 @@ class Chouseiya(Shop):
         i = 1
         while True:
             url = f"https://beer-chouseiya.shop/shopbrand/all_items/page{i}"
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
@@ -25,7 +28,7 @@ class Chouseiya(Shop):
         empty = True
         for item in page_soup("div", class_="innerBox"):
             url = "https://beer-chouseiya.shop" + item.find("a")["href"]
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser"), url
             empty = False
         if empty:

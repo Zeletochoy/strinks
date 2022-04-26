@@ -2,13 +2,16 @@ import re
 from typing import Iterator
 from urllib.parse import urlparse, urlunparse
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 from .utils import keep_until_japanese
+
+
+session = get_retrying_session()
 
 
 def _get_json_url(beer_url: str) -> str:
@@ -29,7 +32,7 @@ class Beerzilla(Shop):
                 "%E3%82%AF%E3%83%A9%E3%83%95%E3%83%88%E3%83%93%E3%83%BC%E3%83%AB"
                 f"?filter.v.availability=1&page={i}&sort_by=created-descending"
             )
-            page = requests.get(url).text
+            page = session.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
@@ -38,7 +41,7 @@ class Beerzilla(Shop):
         for item in page_soup("div", class_="product-card"):
             url = "https://tokyo-beerzilla.myshopify.com" + item.find("a", class_="product-card-link")["href"]
             url = _get_json_url(url)
-            page_json = requests.get(url).json()
+            page_json = session.get(url).json()
             yield page_json
             empty = False
         if empty:

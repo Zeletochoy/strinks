@@ -1,11 +1,13 @@
 from datetime import date, timedelta
 from typing import Iterator
 
-import requests
-
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class IBrew(Shop):
@@ -56,11 +58,11 @@ class IBrew(Shop):
         )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
-        api_json = requests.get(self.json_url).json()
+        api_json = session.get(self.json_url).json()
         if not api_json["taps"]:  # no taplist yet, try previous day
             self.day -= timedelta(days=1)
             self._set_urls()
-            api_json = requests.get(self.json_url).json()
+            api_json = session.get(self.json_url).json()
         self._set_grade_prices(api_json)
         taps = api_json.get("taps", {}).values()
         for tap in taps:

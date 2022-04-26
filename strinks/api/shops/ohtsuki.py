@@ -1,12 +1,15 @@
 import re
 from typing import Iterator
 
-import requests
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import Shop, ShopBeer
+
+
+session = get_retrying_session()
 
 
 class Ohtsuki(Shop):
@@ -15,7 +18,7 @@ class Ohtsuki(Shop):
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         base_url = "http://www.ohtsuki-saketen.com/catalog/"
-        page = requests.get(base_url).content.decode("sjis")
+        page = session.get(base_url).content.decode("sjis")
         page_soup = BeautifulSoup(page, "html.parser")
         for row in page_soup("tr"):
             try:
@@ -26,7 +29,7 @@ class Ohtsuki(Shop):
                 if avail_cell.get_text().strip() == "X":
                     continue  # Sold Out
                 url = base_url + name_cell.find("a")["href"]
-                page = requests.get(url).text.replace("<br/>", "\n")
+                page = session.get(url).text.replace("<br/>", "\n")
                 beer_soup = BeautifulSoup(page, "html.parser")
                 image_url = base_url + beer_soup.find("div", class_="img").find("img")["src"]
                 raw_name = name_cell.get_text("\n").lower().split("\n", 1)[0]
