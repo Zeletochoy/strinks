@@ -65,6 +65,7 @@ class ShopBeer:
             query = query.lower().strip()
             if query in seen:
                 continue
+            seen.add(query)
             yield query
 
 
