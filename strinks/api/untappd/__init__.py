@@ -84,18 +84,17 @@ class UntappdClient:
             self.backend_idx = 0
             self.last_time_at_first = datetime.now()
         for query in beer.iter_untappd_queries():
-            query = query.strip().lower()
             cached_beer = self.cache.get(query)
-            if (
-                cached_beer is not None
-                and cached_beer.beer_id is not None
-                and datetime.now() - datetime.fromtimestamp(cached_beer.timestamp) < BEER_CACHE_TIME
-            ):
-                while True:
-                    try:
-                        return self.current_backend.get_beer_from_id(cached_beer.beer_id), query
-                    except RateLimitError:
-                        self.next_backend()
+            if cached_beer is not None:
+                valid = datetime.now() - datetime.fromtimestamp(cached_beer.timestamp) < BEER_CACHE_TIME
+                if valid:
+                    if cached_beer.beer_id is None:
+                        continue
+                    while True:
+                        try:
+                            return self.current_backend.get_beer_from_id(cached_beer.beer_id), query
+                        except RateLimitError:
+                            self.next_backend()
             res = self._query_beer(query)
             self.cache[query] = UntappdCacheEntry(None if res is None else res.beer_id, int(datetime.now().timestamp()))
             if res is not None:
