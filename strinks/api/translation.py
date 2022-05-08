@@ -46,7 +46,7 @@ BREWERY_JP_EN = {
     "ブリュードッグ": "Brewdog",
     "ブレイクサイド": "Breakside",
     "ベアレン": "Bearen",
-    "ベアレン醸造所": "Baird",
+    "ベアレン醸造所": "Bearen",
     "ベアードビール": "Baird",
     "ベルチング ビーバー": "Belching Beaver",
     "ミッケラー": "Mikkeller",
