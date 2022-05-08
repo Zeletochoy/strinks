@@ -50,9 +50,13 @@ class Goodbeer(Shop):
             raise NotABeerError
         title = re.sub(r"【[^】]*】", "", title).replace("限定醸造", "")
         name_parts = title.split(jp_brewery, 1)
-        raw_name = name_parts[0] if name_parts[0] else title
+        if name_parts[0]:  # Has english name
+            raw_name = name_parts[0]
+            brewery_name, beer_name = raw_name.split(" ", 1)
+        else:
+            raw_name = title
+            brewery_name, beer_name = name_parts
         raw_name = raw_name.strip().lower()
-        brewery_name, beer_name = raw_name.split(" ", 1)
         table = detail.find(id="item-table")
         for row in table("dl"):
             try:
