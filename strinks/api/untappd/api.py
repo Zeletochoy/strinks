@@ -61,6 +61,8 @@ class UntappdAPI:
         return res_json
 
     def try_find_beer(self, query: str) -> Optional[UntappdBeerResult]:
+        if not query:
+            return None
         res_json = self.api_request("/search/beer", q=query, limit=10)
         results = res_json["response"]["beers"]["items"]
         if not results:

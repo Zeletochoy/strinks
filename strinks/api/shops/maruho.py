@@ -33,8 +33,8 @@ class Maruho(Shop):
 
     def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[dict]:
         empty = True
-        for product in page_soup("div", class_="product"):
-            link = product.find("a", class_="product-link")
+        for product in page_soup("div", class_="product-card"):
+            link = product.find("a", class_="product-card-link")
             url = _get_json_url("https://maruho.shop/" + link["href"])
             page_json = session.get(url).json()
             yield page_json
@@ -52,7 +52,7 @@ class Maruho(Shop):
         brewery_name = title_match.group(3)
         raw_name = f"{brewery_name} {beer_name}"
         price = int(page_json["offers"][0]["price"])
-        image_url = "https" + page_json["thumbnail_url"]
+        image_url = "https:" + page_json["thumbnail_url"]
         url = page_json["url"]
         try:
             return ShopBeer(
