@@ -36,7 +36,7 @@ class IBrew(Shop):
         return self.prices[grade[0]]
 
     def _set_grade_prices(self, api_json: dict) -> None:
-        self.prices = {name[0]: grade["pint"] for name, grade in api_json["prices"].items() if name != "tax"}
+        self.prices = {name[0]: grade["pint"] for name, grade in api_json["prices"].items() if isinstance(grade, dict)}
 
     def _parse_beer(self, tap_json: dict) -> Iterator[ShopBeer]:
         brewery_name = tap_json.get("brewer")
