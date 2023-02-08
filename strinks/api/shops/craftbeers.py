@@ -17,34 +17,29 @@ class CraftBeers(Shop):
     display_name = "Craft Beers"
 
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
-        index = BeautifulSoup(session.get("https://www.craftbeers.jp/").text, "html.parser")
-        menu = index.find(id="categ")("div", class_="tabContainer")[1]
-        for link in menu("a"):
-            url = "https://www.craftbeers.jp" + link["href"]
-            page = session.get(url).content.decode("utf8")
-            yield BeautifulSoup(page, "html.parser")
+        i = 1
+        while True:
+            url = f"https://www.craftbeers.jp/view/category/all_items?page={i}&sort=order"
+            yield BeautifulSoup(session.get(url).text, "html.parser")
+            i += 1
 
     def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:
-        empty = True
-        for item in page_soup("table", class_="t-box2"):
-            url = "https://www.craftbeers.jp" + item.find("a")["href"]
-            yield item, url
-            empty = False
-        if empty:
+        items = page_soup.find("ul", class_="item-list")
+        if items is None:
             raise NoBeersError
+        for item in items("li"):
+            url = "https://www.craftbeers.jp" + item.find("a")["href"]
+            yield BeautifulSoup(session.get(url).text, "html.parser"), url
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         try:
-            raw_name = page_soup.find("a")["href"][1:].rstrip(".html").replace("-", " ").replace("_", " ")
-            raw_name = re.sub(r" \d*can$", "", raw_name.lower())
-            image_url = "https://www.craftbeers.jp" + page_soup.find("img")["src"]
-            buy_box = page_soup.find("dl", class_="boxdl")
-            desc = buy_box.find("dt").get_text().strip().lower()
-            ml_match = re.search(r"(\d+)ml", desc)
-            if ml_match is not None:
-                ml = int(ml_match.group(1))
-            price = int(buy_box.find("span", class_="bold").get_text().replace(",", "").replace("￥", ""))
-        except AttributeError:
+            raw_name = page_soup.find("div", class_="item-title").get_text().strip().lower()
+            image_url = "https://www.craftbeers.jp" + page_soup.find("img", class_="item-image")["src"]
+            table = page_soup.find("table", class_="detail-list")
+            ml_text = next(text for row in table("td") if (text := row.get_text().strip().lower()).endswith("ml"))
+            ml = int(ml_text.replace("ml", ""))
+            price = int(page_soup.find("span", {"data-id": "makeshop-item-price:1"}).get_text().replace(",", ""))
+        except (AttributeError, StopIteration):
             raise NotABeerError
         try:
             return ShopBeer(
