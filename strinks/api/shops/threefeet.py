@@ -18,9 +18,9 @@ class Threefeet(Shop):
         i = 1
         while True:
             url = (
-                "https://cdn5.editmysite.com/app/store/api/v17/editor/users/139134080/sites/983958827989689969/"
-                f"products?page={i}&per_page=180&sort_by=category_order&sort_order=asc&categories[]="
-                "11ec1ebe1a8b6fc0b14a86224c9e9feb&include=images,media_files&in_stock=1&excluded_fulfillment=dine_in"
+                "https://cdn5.editmysite.com/app/store/api/v23/editor/users/139134080/sites/763710076392842546/"
+                f"products?page={i}&per_page=180&sort_by=created_date&sort_order=desc&categories[]="
+                "11ec1ebe1a8b6fc0b14a86224c9e9feb&include=images,media_files,discounts&excluded_fulfillment=dine_in"
             )
             yield session.get(url).json()
             i += 1
@@ -32,7 +32,7 @@ class Threefeet(Shop):
         yield from beers
 
     def _parse_beer_page(self, page_json) -> ShopBeer:
-        raw_name = page_json["seo_page_title"].lower()
+        raw_name = page_json["permalink"].lower().replace("-", " ")
         price = page_json["price"]["high"]
         image_url = page_json["images"]["data"][0]["absolute_url"]
         url = "https://3feet.bansha9.com" + page_json["site_link"]
