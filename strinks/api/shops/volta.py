@@ -60,8 +60,8 @@ class Volta(Shop):
         if raw_name is None:
             footstamp = page_soup.find("div", class_="footstamp")
             title = page_soup.find("h1", class_="product_name").get_text().strip()
-            title = re.sub(r" \d\d?/\d\d?入荷予定", "", title)
-            title = re.sub(r" *\[[^]]+\] *", "", title)
+            title = re.sub(r"\s.\d\d?/\d\d?入荷予定.", "", title)
+            title = re.sub(r"\s*\[[^]]+\]\s*", "", title)
             on_sale = any(link.get_text().strip() == "セール" for link in page_soup("a"))
             if on_sale:
                 title = re.sub(r"^[^!]*!+ *", "", title)  # remove prefix like "SALE!!"
