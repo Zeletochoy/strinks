@@ -21,11 +21,11 @@ class DigTheLine(Shop):
         while True:
             url = (
                 "https://www.searchanise.com/getresults?api_key=9f4Z4f8b4y&q=&sortBy=collection_155521319017_position"
-                f"&sortOrder=asc&restrictBy[snize_facet3]=In Stock&startIndex={40*i}&maxResults=40&items=true"
+                f"&sortOrder=asc&startIndex={40*i}&maxResults=40&items=true"
                 "&pages=true&categories=true&suggestions=true&queryCorrection=true&suggestionsMaxResults=3"
                 "&pageStartIndex=0&pagesMaxResults=20&categoryStartIndex=0&categoriesMaxResults=20&facets=true"
                 f"&facetsShowUnavailableOptions=false&ResultsTitleStrings=2&ResultsDescriptionStrings=0&page={i+1}"
-                "&collection=beer&output=json&_=1605691567140"
+                "&collection=beer&output=json&_=1675839570448"
             )
             yield session.get(url).json()
             i += 1
@@ -33,6 +33,8 @@ class DigTheLine(Shop):
     def _iter_page_beers(self, page_json: dict) -> Iterator[dict]:
         empty = True
         for item in page_json["items"]:
+            if not item["quantity"]:
+                continue
             yield item
             empty = False
         if empty:
