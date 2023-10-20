@@ -1,4 +1,3 @@
-import re
 from typing import Iterator, Tuple
 
 from bs4 import BeautifulSoup
