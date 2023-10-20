@@ -21,7 +21,7 @@ setup(
         "python-dotenv>=0.19.2",
         "requests>=2.24.0",
         "sqlalchemy-utils>=0.38.2",
-        "sqlalchemy[mypy]>=1.4.35",
+        "sqlalchemy[mypy]>=1.4.35,<2",
         "unidecode>=1.1.1",
     ],
     entry_points={

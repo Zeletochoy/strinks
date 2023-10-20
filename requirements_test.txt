@@ -2,4 +2,4 @@ tox
 pytest
 flake8
 mypy
-sqlalchemy[mypy]
+sqlalchemy[mypy]<2
