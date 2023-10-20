@@ -58,7 +58,7 @@ class Chouseiya(Shop):
         image_match = re.search(r"imageview\('(.*)'\)", image_href)
         if image_match is None:
             raise NotABeerError
-        image_url = "https://shop20-makeshop.akamaized.net/shopimages/chouseiya/" + image_match.group(1)
+        image_url = "https://makeshop-multi-images.akamaized.net/chouseiya/itemimages/" + image_match.group(1)
         try:
             return ShopBeer(
                 raw_name=f"{brewery_name} {beer_name}",
