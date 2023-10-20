@@ -33,7 +33,9 @@ class CraftBeers(Shop):
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         try:
             raw_name = page_soup.find("div", class_="item-title").get_text().strip().lower()
-            image_url = "https://www.craftbeers.jp" + page_soup.find("img", class_="item-image")["src"]
+            image_url = page_soup.find("img", class_="item-image")["src"]
+            if not image_url.startswith("https://"):
+                image_url = "https://www.craftbeers.jp" + image_url
             table = page_soup.find("table", class_="detail-list")
             ml_text = next(text for row in table("td") if (text := row.get_text().strip().lower()).endswith("ml"))
             ml = int(ml_text.replace("ml", ""))
