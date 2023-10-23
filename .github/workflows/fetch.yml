@@ -20,11 +20,6 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
 
-      - name: Setup rsync
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y rsync
-
       - name: Setup python
         uses: actions/setup-python@v2
         with:
@@ -44,7 +39,7 @@ jobs:
         env:
           USER: ${{ secrets.DEPLOY_USER }}
           HOST: ${{ secrets.DEPLOY_HOST }}
-          PATH: ${{ secrets.DEPLOY_PATH }}
+          ROOT: ${{ secrets.DEPLOY_PATH }}
 
       - name: Fetch check-ins
         run: strinks-fetch-had
@@ -67,7 +62,7 @@ jobs:
         env:
           USER: ${{ secrets.DEPLOY_USER }}
           HOST: ${{ secrets.DEPLOY_HOST }}
-          PATH: ${{ secrets.DEPLOY_PATH }}
+          ROOT: ${{ secrets.DEPLOY_PATH }}
 
       - name: Delete SSH key
         if: always()
