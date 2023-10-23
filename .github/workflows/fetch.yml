@@ -17,8 +17,13 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           printenv SSH_KEY > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan ${HOST} >> ~/.ssh/known_hosts
+          eval $(ssh-agent)
+          ssh-add ~/.ssh/id_rsa
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
 
       - name: Setup python
         uses: actions/setup-python@v2
@@ -66,4 +71,4 @@ jobs:
 
       - name: Delete SSH key
         if: always()
-        run: rm -f ~/.ssh/id_rsa
+        run: rm -rf ~/.ssh
