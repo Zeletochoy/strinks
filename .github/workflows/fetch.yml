@@ -41,6 +41,9 @@ jobs:
         run: |
           rsync -P ${USER}@${HOST}:${ROOT}/strinks/db.sqlite strinks/
           rsync -P ${USER}@${HOST}:${ROOT}/strinks/api/untappd/untappd_cache.json strinks/api/untappd/
+          ls -la
+          ls -la strinks
+          ls -la strinks/api/untappd
         env:
           USER: ${{ secrets.DEPLOY_USER }}
           HOST: ${{ secrets.DEPLOY_HOST }}
