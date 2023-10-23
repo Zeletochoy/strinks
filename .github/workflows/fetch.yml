@@ -1,0 +1,63 @@
+name: Fetch
+
+on:
+  schedule:
+    - cron:  '42 3 * * *'  # everyday at 3:42
+  workflow_dispatch:  # manual trigger
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    environment: strinks.zeletochoy.fr
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -U pip
+          pip install .
+
+      - name: SSH authentication
+        run: |
+          mkdir -p ~/.ssh
+          printenv SSH_KEY > ~/.ssh/id_rsa
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+
+      - name: Download DB and cache
+        run: |
+          rsync -P ${USER}@${HOST}:${ROOT}/strinks/db.sqlite strinks/
+          rsync -P ${USER}@${HOST}:${ROOT}/strinks/api/untappd/untappd_cache.json strinks/api/untappd/
+        env:
+          USER: ${{ secrets.DEPLOY_USER }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          PATH: ${{ secrets.DEPLOY_PATH }}
+
+      - name: Fetch check-ins
+        run: strinks-fetch-had
+        env:
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          UNTAPPD_CLIENT_ID: ${{ secrets.UNTAPPD_CLIENT_ID }}
+          UNTAPPD_CLIENT_SECRET: ${{ secrets.UNTAPPD_CLIENT_SECRET }}
+
+      - name: Scrape offerings
+        run: strinks-scrape -v
+        env:
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          UNTAPPD_CLIENT_ID: ${{ secrets.UNTAPPD_CLIENT_ID }}
+          UNTAPPD_CLIENT_SECRET: ${{ secrets.UNTAPPD_CLIENT_SECRET }}
+
+      - name: Upload DB and cache
+        run: |
+          rsync -P strinks/db.sqlite ${USER}@${HOST}:${ROOT}/strinks/
+          rsync -P strinks/api/untappd/untappd_cache.json ${USER}@${HOST}:${ROOT}/strinks/api/untappd/
+        env:
+          USER: ${{ secrets.DEPLOY_USER }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          PATH: ${{ secrets.DEPLOY_PATH }}
