@@ -60,7 +60,10 @@ jobs:
           UNTAPPD_CLIENT_SECRET: ${{ secrets.UNTAPPD_CLIENT_SECRET }}
 
       - name: Scrape offerings
-        run: strinks-scrape -v
+        run: |
+          strinks-scrape -v | tee logs
+          grep -zo '========== Summary ==========\(.*\n\)*' < logs >> $GITHUB_STEP_SUMMARY
+          rm logs
         env:
           DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
           UNTAPPD_CLIENT_ID: ${{ secrets.UNTAPPD_CLIENT_ID }}
