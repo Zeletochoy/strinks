@@ -81,3 +81,29 @@ jobs:
       - name: Delete SSH key
         if: always()
         run: rm -rf ~/.ssh
+
+      - name: Create DB copy without users
+        run: |
+          mkdir -p github-pages
+          cp strinks/db.sqlite github-pages
+          strinks-drop-users -d github-pages/db.sqlite
+
+      - name: Upload DB as artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: github-pages
+
+  publish-db:
+    needs:
+      - fetch
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy DB to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
