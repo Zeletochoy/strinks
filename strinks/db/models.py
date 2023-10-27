@@ -254,6 +254,9 @@ class BeerDB:
     def get_users(self) -> List[User]:
         return self.session.query(User).all()
 
+    def drop_users(self) -> None:
+        User.__table__.drop(self.engine)
+
     def get_latest_rating(self, user_id: int) -> Optional[UserRating]:
         return (
             self.session.query(UserRating)

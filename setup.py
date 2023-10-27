@@ -29,6 +29,7 @@ setup(
             "strinks-init-db = strinks.cli.init_db:cli",
             "strinks-scrape = strinks.cli.scrape:cli",
             "strinks-fetch-had = strinks.cli.fetch_had:cli",
+            "strinks-drop-users = strinks.cli.drop_users:cli",
         ],
     },
 )
