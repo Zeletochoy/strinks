@@ -5,13 +5,16 @@ Stonks + Drinks = ~terrible name idea~ Strinks
 
 # Setup
 
-
 * Get python 3.6+ and pip
 * `pip install .`
 
 ## Formatting
 
 To enable the automatic formatting git hook run `git config --local core.hooksPath .githooks/`
+
+# Database
+
+The latest database (without the users table) is published [here](https://zeletochoy.github.io/strinks/db.sqlite) after every update in CI.
 
 
 # Shops
