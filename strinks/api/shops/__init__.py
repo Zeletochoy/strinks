@@ -1,5 +1,6 @@
 import re
 from abc import ABC, abstractmethod
+from functools import partial
 from typing import Dict, Iterator, Optional, Set, Type
 
 import attr
@@ -85,6 +86,7 @@ class Shop(ABC):
 def get_shop_map() -> Dict[str, Type[Shop]]:
     from .antenna import AntennaAmerica
     from .beerzilla import Beerzilla
+    from .cbm import CBM
     from .chouseiya import Chouseiya
     from .craftbeers import CraftBeers
     from .digtheline import DigTheLine
@@ -98,7 +100,7 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
     from .threefeet import Threefeet
     from .volta import Volta
 
-    return {
+    shop_map = {
         cls.short_name: cls  # type: ignore
         for cls in (
             AntennaAmerica,
@@ -117,6 +119,13 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
             Volta,
         )
     }
+
+    shop_map |= {
+        f"cbm-{location.lstrip('cbm-')}": partial(CBM, location=location)
+        for location in CBM.get_locations()
+    }
+
+    return shop_map
 
 
 class NotABeerError(Exception):

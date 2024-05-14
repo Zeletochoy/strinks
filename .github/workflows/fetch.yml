@@ -35,6 +35,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'setup.py'
 
+      - name: Setup Japanese Tesseract
+        run: apt-get install tesseract-ocr-jpn
+
       - name: Install python dependencies
         run: |
           pip install -U pip
@@ -58,6 +61,7 @@ jobs:
           DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
           UNTAPPD_CLIENT_ID: ${{ secrets.UNTAPPD_CLIENT_ID }}
           UNTAPPD_CLIENT_SECRET: ${{ secrets.UNTAPPD_CLIENT_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Scrape offerings
         run: |
