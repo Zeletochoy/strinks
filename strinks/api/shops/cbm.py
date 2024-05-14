@@ -88,7 +88,7 @@ class CBM(Shop):
         gpt_csv = gpt_csv.strip("```").lstrip("csv").strip()  # common issue, wrap in ```csv
         reader = DictReader(gpt_csv.splitlines())
         if set(reader.fieldnames) != set(CSV_HEADER):
-            logger.error(f"Invalid CSV header from ChatGPT: {reader._fieldnames}")
+            logger.error(f"Invalid CSV header from ChatGPT: {reader.fieldnames}")
             return
         for beer in reader:
             beer_name = beer["beer"]

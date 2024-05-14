@@ -31,12 +31,12 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: 'setup.py'
 
       - name: Setup Japanese Tesseract
-        run: apt-get install tesseract-ocr-jpn
+        run: sudo apt-get install tesseract-ocr-jpn
 
       - name: Install python dependencies
         run: |
