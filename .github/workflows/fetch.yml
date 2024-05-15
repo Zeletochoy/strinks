@@ -64,7 +64,7 @@ jobs:
 
       - name: Scrape offerings
         run: |
-          strinks-scrape -v | tee logs
+          strinks-scrape -vs cbm-kanda | tee logs
           grep -zo '========== Summary ==========\(.*\n\)*' < logs >> $GITHUB_STEP_SUMMARY
           rm logs
         env:
