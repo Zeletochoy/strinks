@@ -5,6 +5,7 @@ from time import time
 from typing import Iterator
 
 from bs4 import BeautifulSoup
+from openai import BadRequestError
 from PIL import Image
 
 from ...db.models import BeerDB
@@ -79,12 +80,16 @@ class CBM(Shop):
         return Image.open(BytesIO(data))
 
     def iter_beers(self) -> Iterator[ShopBeer]:
-        gpt = ChatGPTConversation(SYSTEM_PROMPT)
-        gpt.send(text="Here's today's menu:", image_url=self.menu_url)
-        ocr_output = ocr_image(self._download_image())
-        gpt_csv = gpt.send(
-            f"This is the OCR transcript, use it to correct the names but keep all the beers:\n{ocr_output}"
-        )
+        try:
+            gpt = ChatGPTConversation(SYSTEM_PROMPT)
+            gpt.send(text="Here's today's menu:", image_url=self.menu_url)
+            ocr_output = ocr_image(self._download_image())
+            gpt_csv = gpt.send(
+                f"This is the OCR transcript, use it to correct the names but keep all the beers:\n{ocr_output}"
+            )
+        except BadRequestError:
+            logger.exception("OpenAI request error:")
+            return
         gpt_csv = gpt_csv.strip("```").lstrip("csv").strip()  # common issue, wrap in ```csv
         reader = DictReader(gpt_csv.splitlines())
         if set(reader.fieldnames) != set(CSV_HEADER):
