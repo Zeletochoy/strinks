@@ -97,6 +97,7 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
     from .ichigo import IchiGoIchiAle
     from .maruho import Maruho
     from .ohtsuki import Ohtsuki
+    from .slopshop import SlopShop
     from .threefeet import Threefeet
     from .volta import Volta
 
@@ -115,6 +116,7 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
             IchiGoIchiAle,
             Maruho,
             Ohtsuki,
+            SlopShop,
             Threefeet,
             Volta,
         )
