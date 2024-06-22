@@ -22,6 +22,10 @@ class ShopBeer:
     brewery_name: Optional[str] = attr.ib(default=None)
     image_url: Optional[str] = attr.ib(default=None)
 
+    def __attrs_post_init__(self):
+        if not (self.milliliters and self.price and self.quantity):
+            raise NotABeerError
+
     @property
     def unit_price(self) -> float:
         return self.price / self.quantity
