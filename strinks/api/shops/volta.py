@@ -20,8 +20,7 @@ class Volta(Shop):
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
         while True:
-            #url = f"http://beervolta.com/?mode=srh&sort=n&cid=&keyword=&page={i}"
-            url = f"https://beervolta.com/?mode=cate&cbid=2270431&csid=8&sort=n&page={i}"
+            url = f"http://beervolta.com/?mode=srh&sort=n&cid=&keyword=&page={i}"
             page = session.get(url).text
             yield BeautifulSoup(page, "html.parser")
             i += 1
