@@ -14,7 +14,7 @@ jobs:
     environment: strinks.zeletochoy.fr
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: SSH authentication
         run: |
@@ -29,7 +29,7 @@ jobs:
           HOST: ${{ secrets.DEPLOY_HOST }}
 
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -93,7 +93,7 @@ jobs:
           strinks-drop-users -d github-pages/db.sqlite
 
       - name: Upload DB as artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: github-pages
 
@@ -110,4 +110,4 @@ jobs:
     steps:
       - name: Deploy DB to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
