@@ -1,5 +1,5 @@
 import re
-from typing import Iterator
+from collections.abc import Iterator
 from urllib.parse import urlparse, urlunparse
 
 from bs4 import BeautifulSoup
@@ -8,7 +8,6 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-
 
 DIGITS = set("0123456789")
 
@@ -58,7 +57,7 @@ class AntennaAmerica(Shop):
         match = re.search(r"ブリュワリー：([^<]+)<", desc.lower())
         if match is not None:
             brewery_name = match.group(1)
-            beer_name = raw_name[len(brewery_name) + 1:]
+            beer_name = raw_name[len(brewery_name) + 1 :]
         else:
             brewery_name = beer_name = None
         try:

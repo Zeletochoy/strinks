@@ -4,7 +4,6 @@ from ..api.styles import GROUPED_STYLES_WITH_IDS, STYLES, get_styles_by_ids
 from ..api.untappd import UNTAPPD_OAUTH_URL, untappd_get_oauth_token, untappd_get_user_info
 from ..db import get_db
 
-
 app = Flask(__name__)
 
 

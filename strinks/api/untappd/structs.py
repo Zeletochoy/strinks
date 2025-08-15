@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import NamedTuple, Optional, Set
+from typing import NamedTuple
 
-import attr
+from pydantic import BaseModel
 
 
 class FlavorTag(NamedTuple):
@@ -10,18 +10,24 @@ class FlavorTag(NamedTuple):
     count: int  # type: ignore
 
 
-@attr.s
-class UntappdBeerResult:
-    beer_id: int = attr.ib()
-    image_url: str = attr.ib()
-    name: str = attr.ib()
-    brewery: str = attr.ib()
-    style: str = attr.ib()
-    abv: float = attr.ib()
-    ibu: float = attr.ib()
-    rating: float = attr.ib()
-    description: Optional[str] = attr.ib(default=None)
-    tags: Optional[Set[FlavorTag]] = attr.ib(default=None)
+class UntappdBeerResult(BaseModel):
+    beer_id: int
+    image_url: str
+    name: str
+    brewery: str
+    style: str
+    abv: float
+    ibu: float
+    rating: float
+    description: str | None = None
+    tags: set[FlavorTag] | None = None
+
+
+class UntappdBreweryResult(BaseModel):
+    brewery_id: int
+    image_url: str
+    name: str
+    country: str
 
 
 class UserInfo(NamedTuple):

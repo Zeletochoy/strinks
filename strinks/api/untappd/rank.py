@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from editdistance import eval as edit_distance
 

@@ -1,30 +1,32 @@
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterator
 from functools import partial
-from typing import Dict, Iterator, Optional, Set, Type
+from typing import Dict, Optional, Set, Type
 
-import attr
+from pydantic import BaseModel, Field, model_validator
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..translation import BREWERY_JP_EN, deepl_translate, has_japanese, to_romaji
 
 
-@attr.s
-class ShopBeer:
-    raw_name: str = attr.ib()
-    url: str = attr.ib()
-    milliliters: int = attr.ib()
-    price: int = attr.ib()
-    quantity: int = attr.ib()
-    available: Optional[int] = attr.ib(default=None)
-    beer_name: Optional[str] = attr.ib(default=None)
-    brewery_name: Optional[str] = attr.ib(default=None)
-    image_url: Optional[str] = attr.ib(default=None)
+class ShopBeer(BaseModel):
+    raw_name: str
+    url: str
+    milliliters: int
+    price: int
+    quantity: int
+    available: int | None = None
+    beer_name: str | None = None
+    brewery_name: str | None = None
+    image_url: str | None = None
 
-    def __attrs_post_init__(self):
+    @model_validator(mode="after")
+    def validate_positive_values(self):
         if not (self.milliliters and self.price and self.quantity):
             raise NotABeerError
+        return self
 
     @property
     def unit_price(self) -> float:
@@ -65,7 +67,7 @@ class ShopBeer:
             yield deepl_translate(self.raw_name)
 
     def iter_untappd_queries(self) -> Iterator[str]:
-        seen: Set[str] = set()
+        seen: set[str] = set()
         for query in self._iter_untappd_queries():
             query = query.lower().strip()
             if query in seen:
@@ -79,15 +81,14 @@ class Shop(ABC):
     display_name = "Shop"
 
     @abstractmethod
-    def iter_beers(self) -> Iterator[ShopBeer]:
-        ...
+    def iter_beers(self) -> Iterator[ShopBeer]: ...
 
     @abstractmethod
-    def get_db_entry(self, db: BeerDB) -> DBShop:
-        ...
+    def get_db_entry(self, db: BeerDB) -> DBShop: ...
 
 
-def get_shop_map() -> Dict[str, Type[Shop]]:
+def get_shop_map() -> dict[str, Callable[[], Shop]]:
+    # TODO: autodiscovery
     from .antenna import AntennaAmerica
     from .beerzilla import Beerzilla
     from .cbm import CBM
@@ -105,8 +106,8 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
     from .threefeet import Threefeet
     from .volta import Volta
 
-    shop_map = {
-        cls.short_name: cls  # type: ignore
+    shop_map: dict[str, Callable[[], Shop]] = {
+        cls.short_name: cls
         for cls in (
             AntennaAmerica,
             Beerzilla,
@@ -126,17 +127,13 @@ def get_shop_map() -> Dict[str, Type[Shop]]:
         )
     }
 
-    shop_map |= {
-        f"cbm-{location.lstrip('cbm-')}": partial(CBM, location=location)
-        for location in CBM.get_locations()
-    }
+    # TODO: standardize this to integrate in autodiscovery
+    shop_map |= {f"cbm-{location.lstrip('cbm-')}": partial(CBM, location=location) for location in CBM.get_locations()}
 
     return shop_map
 
 
-class NotABeerError(Exception):
-    ...
+class NotABeerError(Exception): ...
 
 
-class NoBeersError(Exception):
-    ...
+class NoBeersError(Exception): ...

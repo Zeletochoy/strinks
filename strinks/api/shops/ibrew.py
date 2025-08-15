@@ -1,11 +1,10 @@
-from datetime import date, timedelta
-from typing import Iterator
+from collections.abc import Iterator
+from datetime import timedelta
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..utils import get_retrying_session, now_jst
 from . import Shop, ShopBeer
-
 
 session = get_retrying_session()
 
@@ -17,9 +16,9 @@ class IBrew(Shop):
     def __init__(self, location="ebisu", day=None):
         self.location = location
         if day is None:
-            day = date.today()
+            day = now_jst().date()
         self.day = day
-        self.prices = {}
+        self.prices: dict[str, int] = {}
         self.html_url = f"https://menu.craftbeerbar-ibrew.com/{self.location}-menu/todays-beer/"
         self._set_urls()
 
@@ -56,7 +55,7 @@ class IBrew(Shop):
             brewery_name=brewery_name,
             beer_name=beer_name,
             milliliters=470,
-            price=int(round(price * 1.1)),  # tax
+            price=round(price * 1.1),  # tax
             quantity=1,
             image_url=image_url,
         )

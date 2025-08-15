@@ -1,6 +1,5 @@
 from setuptools import find_packages, setup
 
-
 setup(
     name="strinks",
     version="0.0.1",
@@ -32,6 +31,7 @@ setup(
             "strinks-scrape = strinks.cli.scrape:cli",
             "strinks-fetch-had = strinks.cli.fetch_had:cli",
             "strinks-drop-users = strinks.cli.drop_users:cli",
+            "strinks-fetch-breweries = strinks.cli.fetch_breweries:cli",
         ],
     },
 )

@@ -1,5 +1,5 @@
 import re
-from typing import Iterator
+from collections.abc import Iterator
 
 from bs4 import BeautifulSoup
 
@@ -7,7 +7,6 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import Shop, ShopBeer
-
 
 session = get_retrying_session()
 
@@ -20,7 +19,7 @@ class Ohtsuki(Shop):
         base_url = "https://ohtsuki-saketen.com/beer/index.html"
         page_soup = BeautifulSoup(session.get(base_url).text, "html.parser")
         for table in page_soup("table", class_="product"):
-            for row in page_soup("tr"):
+            for row in table("tr"):
                 try:
                     try:
                         name_cell, _, ml_cell, price_cell, avail_cell = row("td")

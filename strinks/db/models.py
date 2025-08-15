@@ -1,16 +1,16 @@
-from contextlib import contextmanager
+from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager, suppress
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
-from sqlalchemy import create_engine, func, or_
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import func, or_
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.sql.expression import desc
 from sqlalchemy_utils import escape_like
+from sqlmodel import Session, SQLModel, col, create_engine, delete, select
 
-from .tables import Beer, BeerTag, FlavorTag, Offering, Shop, User, UserRating
-
+from ..api.utils import now_jst
+from .tables import Beer, BeerTag, Brewery, FlavorTag, Offering, Shop, User, UserRating
 
 if TYPE_CHECKING:
     from ..api.untappd import UserInfo
@@ -20,7 +20,7 @@ T = TypeVar("T")
 
 
 class BeerDB:
-    def __init__(self, path: Union[str, Path, None] = None, read_only=True, debug_echo=False):
+    def __init__(self, path: str | Path | None = None, read_only=True, debug_echo=False):
         """
         path: path to the sqlite database file or None for in-memory
         debug_echo: log SQL queries
@@ -33,26 +33,18 @@ class BeerDB:
             if read_only:
                 db_uri += "&mode=ro"
         self.engine = create_engine(f"sqlite://{db_uri}", echo=debug_echo, poolclass=StaticPool)
-        self.session_maker = sessionmaker(bind=self.engine)
-        self.session = self.session_maker()
+        self.session = Session(self.engine)
 
-        Beer.__table__.create(self.engine, checkfirst=True)
-        Shop.__table__.create(self.engine, checkfirst=True)
-        Offering.__table__.create(self.engine, checkfirst=True)
-        User.__table__.create(self.engine, checkfirst=True)
-        UserRating.__table__.create(self.engine, checkfirst=True)
-        FlavorTag.__table__.create(self.engine, checkfirst=True)
-        BeerTag.__table__.create(self.engine, checkfirst=True)
+        SQLModel.metadata.create_all(self.engine, checkfirst=True)
 
     def __del__(self):
-        try:
+        with suppress(Exception):
             self.session.close()
-        except Exception:
-            pass
 
-    def _insert(self, _check_existence: bool, table: Type[T], **params) -> T:
+    def _insert(self, _check_existence: bool, table: type[T], **params) -> T:
         if _check_existence:
-            instance = self.session.query(table).filter_by(**params).first()
+            statement = select(table).filter_by(**params)
+            instance = self.session.exec(statement).first()
         else:
             instance = None
         if not instance:
@@ -75,11 +67,12 @@ class BeerDB:
         url: str,
         image_url: str,
         shipping_fee: int,
-        free_shipping_over: Optional[int] = None,
+        free_shipping_over: int | None = None,
         check_existence: bool = True,
     ) -> Shop:
         if check_existence:
-            shop = self.session.query(Shop).filter_by(name=name).first()
+            statement = select(Shop).where(Shop.name == name)
+            shop = self.session.exec(statement).first()
             if shop is not None:
                 shop.url = url
                 shop.image_url = image_url
@@ -106,13 +99,14 @@ class BeerDB:
         abv: float,
         ibu: float,
         rating: float,
-        description: Optional[str] = None,
-        tags: Optional[Sequence[Tuple[FlavorTag, int]]] = None,
+        description: str | None = None,
+        tags: Sequence[tuple[FlavorTag, int]] | None = None,
         check_existence: bool = True,
     ) -> Beer:
         beer = None
         if check_existence:
-            beer = self.session.query(Beer).filter_by(beer_id=beer_id).first()
+            statement = select(Beer).where(Beer.beer_id == beer_id)
+            beer = self.session.exec(statement).first()
             if beer is not None:
                 beer.image_url = image_url
                 beer.name = name
@@ -121,7 +115,7 @@ class BeerDB:
                 beer.abv = abv
                 beer.ibu = ibu
                 beer.rating = rating
-                beer.updated_at = datetime.now()
+                beer.updated_at = now_jst()
                 beer.description = description
         if beer is None:
             beer = Beer(
@@ -133,7 +127,7 @@ class BeerDB:
                 abv=abv,
                 ibu=ibu,
                 rating=rating,
-                updated_at=datetime.now(),
+                updated_at=now_jst(),
                 description=description,
             )
             self.session.add(beer)
@@ -142,8 +136,9 @@ class BeerDB:
                 beer.tags.append(BeerTag(beer_id=beer_id, tag_id=flavor_tag.tag_id, count=count))
         return beer
 
-    def get_beer(self, beer_id: int) -> Optional[Beer]:
-        return self.session.query(Beer).filter_by(beer_id=beer_id).one_or_none()
+    def get_beer(self, beer_id: int) -> Beer | None:
+        statement = select(Beer).where(Beer.beer_id == beer_id)
+        return self.session.exec(statement).one_or_none()
 
     def insert_offering(
         self,
@@ -152,17 +147,18 @@ class BeerDB:
         url: str,
         milliliters: int,
         price: int,
-        image_url: Optional[str] = None,
+        image_url: str | None = None,
         check_existence: bool = True,
     ) -> Offering:
         if check_existence:
-            offering = self.session.query(Offering).filter_by(shop_id=shop.shop_id, beer_id=beer.beer_id).first()
+            statement = select(Offering).where(Offering.shop_id == shop.shop_id, Offering.beer_id == beer.beer_id)
+            offering = self.session.exec(statement).first()
             if offering is not None:
                 offering.url = url
                 offering.milliliters = milliliters
                 offering.price = price
                 offering.image_url = image_url
-                offering.updated_at = datetime.now()
+                offering.updated_at = now_jst()
                 return offering
         offering = Offering(
             shop_id=shop.shop_id,
@@ -171,7 +167,7 @@ class BeerDB:
             milliliters=milliliters,
             price=price,
             image_url=image_url,
-            updated_at=datetime.now(),
+            updated_at=now_jst(),
         )
         self.session.add(offering)
         return offering
@@ -180,12 +176,12 @@ class BeerDB:
         self,
         n: int,
         value_factor: float = 8,
-        search: Optional[str] = None,
-        shop_id: Optional[int] = None,
-        styles: Optional[Iterable[str]] = None,
-        min_price: Optional[int] = None,
-        max_price: Optional[int] = None,
-        exclude_user_had: Optional[int] = None,  # user ID
+        search: str | None = None,
+        shop_id: int | None = None,
+        styles: Iterable[str] | None = None,
+        min_price: int | None = None,
+        max_price: int | None = None,
+        exclude_user_had: int | None = None,  # user ID
     ) -> Iterator[Beer]:
         def beer_value(rating, cost):
             return (value_factor**rating) / cost
@@ -193,48 +189,52 @@ class BeerDB:
         conn = self.engine.raw_connection()
         conn.create_function("beer_value", 2, beer_value)  # type: ignore
 
-        query = self.session.query(Beer).filter(Beer.rating != 0).join(Offering).filter(Offering.price != 0)
+        statement = select(Beer).join(Offering).where(Beer.rating != 0, Offering.price != 0)
 
         if search is not None:
             like = f"%{escape_like(search)}%"
-            query = query.filter(
+            statement = statement.where(
                 or_(
-                    Beer.name.ilike(like),
-                    Beer.brewery.ilike(like),
+                    col(Beer.name).ilike(like),
+                    col(Beer.brewery).ilike(like),
                 )
             )
 
         if min_price is not None:
-            query = query.filter(Offering.price >= min_price)
+            statement = statement.where(Offering.price >= min_price)
         if max_price is not None:
-            query = query.filter(Offering.price <= max_price)
+            statement = statement.where(Offering.price <= max_price)
 
         if shop_id is not None:
-            query = query.filter_by(shop_id=shop_id)
+            statement = statement.where(Offering.shop_id == shop_id)
 
         if styles is not None:
-            query = query.filter(Beer.style.in_(styles))
+            statement = statement.where(col(Beer.style).in_(styles))
 
         if exclude_user_had is not None:
-            query = query.filter(~Beer.ratings.any(UserRating.user_id == exclude_user_had))
+            # For relationship.any(), we need to use exists subquery
+            from sqlalchemy import exists
 
-        return (
-            query.order_by(func.beer_value(Beer.rating, Offering.price_per_ml).desc())
+            subquery = select(UserRating).where(
+                UserRating.beer_id == Beer.beer_id, UserRating.user_id == exclude_user_had
+            )
+            statement = statement.where(~exists(subquery))
+
+        statement = (
+            statement.order_by(func.beer_value(Beer.rating, Offering.price / Offering.milliliters).desc())
             .distinct()
             .limit(n)
-            .all()  # type: ignore
         )
+
+        return self.session.exec(statement)
 
     def get_shops(self) -> Iterator[Shop]:
-        return self.session.query(Shop).order_by(Shop.name).all()  # type: ignore
+        statement = select(Shop).order_by(Shop.name)
+        return self.session.exec(statement)
 
     def remove_expired_offerings(self, shop: Shop, valid_ids: Iterable[int]) -> None:
-        (
-            self.session.query(Offering)
-            .filter_by(shop_id=shop.shop_id)
-            .filter(~Offering.beer_id.in_(valid_ids))
-            .delete(synchronize_session=False)
-        )
+        statement = delete(Offering).where(col(Offering.shop_id) == shop.shop_id, ~col(Offering.beer_id).in_(valid_ids))
+        self.session.execute(statement)
 
     def create_user(self, user_info: "UserInfo") -> User:
         user = User(
@@ -248,23 +248,22 @@ class BeerDB:
         self.session.add(user)
         return user
 
-    def get_user(self, user_id: int) -> Optional[User]:
-        return self.session.query(User).filter_by(id=user_id).one_or_none()
+    def get_user(self, user_id: int) -> User | None:
+        statement = select(User).where(User.id == user_id)
+        return self.session.exec(statement).one_or_none()
 
-    def get_users(self) -> List[User]:
-        return self.session.query(User).all()
+    def get_users(self) -> list[User]:
+        statement = select(User)
+        return list(self.session.exec(statement))
 
     def drop_users(self) -> None:
-        User.__table__.drop(self.engine)
+        SQLModel.metadata.tables[User.__tablename__].drop(self.engine)
 
-    def get_latest_rating(self, user_id: int) -> Optional[UserRating]:
-        return (
-            self.session.query(UserRating)
-            .filter_by(user_id=user_id)
-            .order_by(desc(UserRating.updated_at))
-            .limit(1)
-            .one_or_none()
+    def get_latest_rating(self, user_id: int) -> UserRating | None:
+        statement = (
+            select(UserRating).where(UserRating.user_id == user_id).order_by(col(UserRating.updated_at).desc()).limit(1)
         )
+        return self.session.exec(statement).one_or_none()
 
     def insert_rating(
         self,
@@ -275,7 +274,8 @@ class BeerDB:
         check_existence: bool = True,
     ) -> UserRating:
         if check_existence:
-            user_rating = self.session.query(UserRating).filter_by(beer_id=beer_id, user_id=user_id).first()
+            statement = select(UserRating).where(UserRating.beer_id == beer_id, UserRating.user_id == user_id)
+            user_rating = self.session.exec(statement).first()
             if user_rating is not None:
                 user_rating.rating = rating
                 user_rating.updated_at = updated_at
@@ -289,8 +289,36 @@ class BeerDB:
         self.session.add(user_rating)
         return user_rating
 
-    def get_access_tokens(self, is_app: Optional[bool] = None) -> List[str]:
-        query = self.session.query(User.access_token)
+    def insert_brewery(
+        self,
+        brewery_id: int,
+        image_url: str,
+        name: str,
+        country: str,
+        check_existence: bool = True,
+    ) -> Brewery:
+        if check_existence:
+            statement = select(Brewery).where(Brewery.brewery_id == brewery_id)
+            brewery = self.session.exec(statement).first()
+            if brewery is not None:
+                brewery.image_url = image_url
+                brewery.name = name
+                brewery.country = country
+                return brewery
+        brewery = Brewery(
+            brewery_id=brewery_id,
+            image_url=image_url,
+            name=name,
+            country=country,
+        )
+        self.session.add(brewery)
+        return brewery
+
+    def get_access_tokens(self, is_app: bool | None = None) -> list[str]:
+        statement = select(User.access_token)
+
         if is_app is not None:
-            query = query.filter_by(is_app=is_app)
-        return [token for token, in query.all()]
+            statement = statement.where(User.is_app == is_app)
+
+        results = self.session.exec(statement)
+        return [token for token in results if token is not None]

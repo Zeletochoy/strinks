@@ -1,4 +1,4 @@
-from typing import NamedTuple, Optional, Set
+from typing import NamedTuple
 
 import click
 from sqlalchemy.exc import IntegrityError
@@ -6,7 +6,6 @@ from sqlalchemy.exc import IntegrityError
 from strinks.api.shops import Shop, get_shop_map
 from strinks.api.untappd import UntappdClient
 from strinks.db import BeerDB, get_db
-
 
 SHOP_MAP = get_shop_map()
 
@@ -20,7 +19,7 @@ class ScrapeSummary(NamedTuple):
 
 
 def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -> ScrapeSummary:
-    found_ids: Set[int] = set()
+    found_ids: set[int] = set()
     num_found = num_untappd = 0
     with db.commit_or_rollback():
         db_shop = shop.get_db_entry(db)
@@ -34,9 +33,7 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
         num_untappd += 1
         beer, query = res
         if verbose:
-            print(
-                f"[Shop] '{offering.raw_name}' -> " f"[Query] '{query}' -> " f"[Untappd] '{beer.brewery} - {beer.name}'"
-            )
+            print(f"[Shop] '{offering.raw_name}' -> [Query] '{query}' -> [Untappd] '{beer.brewery} - {beer.name}'")
         try:
             with db.commit_or_rollback():
                 db_beer = db.insert_beer(
@@ -79,11 +76,8 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
 )
 @click.option("-s", "--shop-name", type=click.Choice(list(SHOP_MAP)), default=None, help="Shop name, default: all")
 @click.option("-v", "--verbose", is_flag=True, help="Display debug info")
-def cli(database: Optional[click.Path], shop_name: Optional[str], verbose: bool):
-    if shop_name is None:
-        shops = [cls() for _, cls in SHOP_MAP.items()]
-    else:
-        shops = [SHOP_MAP[shop_name]()]
+def cli(database: click.Path | None, shop_name: str | None, verbose: bool):
+    shops = [cls() for _, cls in SHOP_MAP.items()] if shop_name is None else [SHOP_MAP[shop_name]()]
 
     untappd = UntappdClient()
     db = get_db(str(database) if database is not None else None)

@@ -7,7 +7,6 @@ import pykakasi
 from .settings import DEEPL_API_KEY
 from .utils import get_retrying_session
 
-
 session = get_retrying_session()
 
 
@@ -17,7 +16,14 @@ try:
         DEEPL_CACHE = json.load(f)
 except OSError:
     DEEPL_CACHE = {}
-atexit.register(lambda: json.dump(DEEPL_CACHE, open(DEEPL_CACHE_PATH, "w")))
+
+
+def save_cache():
+    with open(DEEPL_CACHE_PATH, "w") as f:
+        json.dump(DEEPL_CACHE, f)
+
+
+atexit.register(save_cache)
 
 
 BREWERY_JP_EN = {
@@ -81,16 +87,17 @@ def deepl_translate(text: str) -> str:
         return text
     res = session.get(
         "https://api-free.deepl.com/v2/translate",
-        params=dict(
-            auth_key=DEEPL_API_KEY,
-            text=text,
-            split_sentences="0",
-            source_lang="JA",
-            target_lang="EN-US",
-        ),
+        params={
+            "auth_key": DEEPL_API_KEY,
+            "text": text,
+            "split_sentences": "0",
+            "source_lang": "JA",
+            "target_lang": "EN-US",
+        },
     )
     try:
-        translation = res.json()["translations"][0]["text"]
+        data = res.json()
+        translation: str = data["translations"][0]["text"]
         DEEPL_CACHE[text] = translation
     except Exception as e:
         print(f"DeepL translation failed: {e}")

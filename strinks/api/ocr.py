@@ -3,4 +3,5 @@ from pytesseract import image_to_string
 
 
 def ocr_image(image: Image) -> str:
-    return image_to_string(image, lang="jpn+eng")
+    result: str = image_to_string(image, lang="jpn+eng")
+    return result

@@ -1,12 +1,11 @@
-from typing import Iterator, Tuple
+from collections.abc import Iterator
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-
 
 session = get_retrying_session()
 
@@ -22,9 +21,9 @@ class CraftBeers(Shop):
             yield BeautifulSoup(session.get(url).text, "html.parser")
             i += 1
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:
+    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[tuple[BeautifulSoup, str]]:
         items = page_soup.find("ul", class_="item-list")
-        if items is None:
+        if not isinstance(items, Tag):
             raise NoBeersError
         for item in items("li"):
             url = "https://www.craftbeers.jp" + item.find("a")["href"]

@@ -1,5 +1,5 @@
 import re
-from typing import Iterator
+from collections.abc import Iterator
 from urllib.parse import urlparse, urlunparse
 
 from bs4 import BeautifulSoup
@@ -8,7 +8,6 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-
 
 session = get_retrying_session()
 

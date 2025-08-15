@@ -1,4 +1,4 @@
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import click
 from sqlalchemy.exc import IntegrityError
@@ -62,7 +62,7 @@ def fetch_user_had(user: User, db: BeerDB, verbose: bool) -> FetchSummary:
 )
 @click.option("-u", "--user-id", type=int, default=None, help="User ID, default: all")
 @click.option("-v", "--verbose", is_flag=True, help="Display debug info")
-def cli(database: Optional[click.Path], user_id: Optional[int], verbose: bool):
+def cli(database: click.Path | None, user_id: int | None, verbose: bool):
     db = get_db(str(database) if database is not None else None)
 
     if user_id is None:

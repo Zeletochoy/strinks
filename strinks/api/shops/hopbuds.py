@@ -1,5 +1,5 @@
 import re
-from typing import Iterator, Tuple
+from collections.abc import Iterator
 
 from bs4 import BeautifulSoup
 
@@ -7,7 +7,6 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-
 
 session = get_retrying_session()
 
@@ -24,7 +23,7 @@ class HopBuds(Shop):
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[Tuple[BeautifulSoup, str]]:
+    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[tuple[BeautifulSoup, str]]:
         empty = True
         for item in page_soup("a", class_="product-card"):
             if item.find("div", class_="product-card__availability"):

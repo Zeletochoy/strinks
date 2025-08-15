@@ -1,15 +1,15 @@
 import logging
 import time
+from collections.abc import Iterator
 from datetime import datetime, timedelta
-from typing import Iterator, Optional, Tuple, Union
+from typing import Any
 
 from ...db import get_db
 from ..settings import UNTAPPD_CLIENT_ID
-from ..utils import get_retrying_session
+from ..utils import JST, get_retrying_session, now_jst
 from .auth import get_untappd_api_auth_params
 from .rank import best_match
-from .structs import FlavorTag, RateLimitError, UntappdBeerResult, UserRating
-
+from .structs import FlavorTag, RateLimitError, UntappdBeerResult, UntappdBreweryResult, UserRating
 
 logger = logging.getLogger(__name__)
 session = get_retrying_session()
@@ -22,11 +22,11 @@ USER_AGENT = f"Strinks ({UNTAPPD_CLIENT_ID})"
 
 
 class UntappdAPI:
-    def __init__(self, auth_token: Optional[str] = None):
+    def __init__(self, auth_token: str | None = None):
         self.auth_token = auth_token
-        self.rate_limited_until = datetime.now()
+        self.rate_limited_until = now_jst()
         self.db = get_db()
-        self.last_request_time = datetime.fromtimestamp(0)
+        self.last_request_time = datetime.fromtimestamp(0, tz=JST)
 
     def __str__(self) -> str:
         auth = f"{self.auth_token[:5]}..." if self.auth_token else "APP"
@@ -35,9 +35,9 @@ class UntappdAPI:
     def __repr__(self) -> str:
         return str(self)
 
-    def api_request(self, uri: str, **params: Union[str, int]) -> dict:
+    def api_request(self, uri: str, **params: str | int) -> dict[str, Any]:
         # Rate limit
-        now = datetime.now()
+        now = now_jst()
         if self.rate_limited_until > now:
             raise RateLimitError()
         time_since_last = now - self.last_request_time
@@ -52,15 +52,15 @@ class UntappdAPI:
             headers={"User-Agent": USER_AGENT},
         )
         if res.status_code != 200:
-            self.rate_limited_until = datetime.now() + RATE_LIMIT_COOLDOWN
+            self.rate_limited_until = now_jst() + RATE_LIMIT_COOLDOWN
             raise RateLimitError()
-        res_json = res.json()
+        res_json: dict[str, Any] = res.json()
         if res_json.get("meta", {}).get("code", 200) != 200:
-            self.rate_limited_until = datetime.now() + RATE_LIMIT_COOLDOWN
+            self.rate_limited_until = now_jst() + RATE_LIMIT_COOLDOWN
             raise RateLimitError()
         return res_json
 
-    def try_find_beer(self, query: str) -> Optional[UntappdBeerResult]:
+    def try_find_beer(self, query: str) -> UntappdBeerResult | None:
         if not query:
             return None
         res_json = self.api_request("/search/beer", q=query, limit=10)
@@ -74,11 +74,16 @@ class UntappdAPI:
     def get_beer_from_id(self, beer_id: int) -> UntappdBeerResult:
         return self._get_beer_from_db(beer_id) or self._query_beer(beer_id)
 
-    def _get_beer_from_db(self, beer_id: int) -> Optional[UntappdBeerResult]:
+    def _get_beer_from_db(self, beer_id: int) -> UntappdBeerResult | None:
         beer = self.db.get_beer(beer_id)
-        if beer is None or datetime.now() - beer.updated_at > BEER_CACHE_TIME:
-            if beer is not None:
-                print(f"Updating {beer}...")
+        if beer is None:
+            return None
+        # Handle both naive and aware datetimes for backward compatibility
+        updated_at = beer.updated_at
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=JST)
+        if now_jst() - updated_at > BEER_CACHE_TIME:
+            print(f"Updating {beer}...")
             return None
         return UntappdBeerResult(
             beer_id=beer.beer_id,
@@ -116,13 +121,27 @@ class UntappdAPI:
             tags=tags,
         )
 
+    def search_breweries(self, query: str) -> list[UntappdBreweryResult]:
+        if not query:
+            return []
+        res_json = self.api_request("/search/brewery", q=query, limit=50)
+        return [
+            UntappdBreweryResult(
+                brewery_id=result["brewery"]["brewery_id"],
+                image_url=result["brewery"]["brewery_label"],
+                name=result["brewery"]["brewery_name"],
+                country=result["brewery"]["country_name"],
+            )
+            for result in res_json["response"]["brewery"]["items"]
+        ]
+
     def iter_had_beers(
-        self, user_id: Optional[int] = None, from_time: Optional[datetime] = None
-    ) -> Iterator[Tuple[UntappdBeerResult, UserRating]]:
+        self, user_id: int | None = None, from_time: datetime | None = None
+    ) -> Iterator[tuple[UntappdBeerResult, UserRating]]:
         if from_time is None:
-            from_time = datetime.fromtimestamp(0)
+            from_time = datetime.fromtimestamp(0, tz=JST)
         from_formatted = from_time.strftime("%Y-%m-%d")
-        to_formatted = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        to_formatted = (now_jst() + timedelta(days=1)).strftime("%Y-%m-%d")
         url = f"/user/beers/{user_id or ''}"
         num_fetched = 0
         while True:

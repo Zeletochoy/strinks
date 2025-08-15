@@ -1,11 +1,10 @@
 import re
-from typing import Iterator
+from collections.abc import Iterator
 
 from ...db.models import BeerDB
-from ..utils import get_retrying_session
 from ...db.tables import Shop as DBShop
+from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-
 
 session = get_retrying_session()
 

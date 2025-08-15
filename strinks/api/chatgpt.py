@@ -1,3 +1,5 @@
+from typing import Any
+
 from openai import OpenAI
 
 
@@ -7,12 +9,12 @@ class ChatGPTConversation:
         self.model = model
         self.temperature = temperature
 
-        self.messages = []
+        self.messages: list[dict[str, Any]] = []
         if system_prompt:
             self.messages.append({"role": "system", "content": system_prompt})
 
     def send(self, text: str = "", image_url: str = "") -> str:
-        parts = []
+        parts: list[dict[str, Any]] = []
         if text:
             parts.append({"type": "text", "text": text})
         if image_url:
@@ -21,12 +23,19 @@ class ChatGPTConversation:
             raise ValueError("Nothing to send")
         self.messages.append({"role": "user", "content": parts})
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=self.messages,
-            temperature=self.temperature,
-        ).choices[0].message.content
+        message = (
+            self.client.chat.completions.create(
+                model=self.model,
+                messages=self.messages,
+                temperature=self.temperature,
+            )
+            .choices[0]
+            .message
+        )
 
-        self.messages.append({"role": "assistant", "content": response})
+        content: str | None = message.content
+        if content is None:
+            raise ValueError("OpenAI returned None response")
 
-        return response
+        self.messages.append({"role": "assistant", "content": content})
+        return content

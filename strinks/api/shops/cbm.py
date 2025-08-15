@@ -1,8 +1,8 @@
 import logging
+from collections.abc import Iterator
 from csv import DictReader
 from io import BytesIO
 from time import time
-from typing import Iterator
 
 from bs4 import BeautifulSoup
 from openai import BadRequestError
@@ -14,7 +14,6 @@ from ..chatgpt import ChatGPTConversation
 from ..ocr import ocr_image
 from ..utils import get_retrying_session
 from . import Shop, ShopBeer
-
 
 LIST_URL = "https://www.craftbeermarket.jp/todays-beer-list"
 UNSUPPORTED_LOCATIONS = {"yakinicraft-kanda"}
@@ -46,7 +45,7 @@ Make sure to output the brewery and beer names exactly as they appear on the men
 don't try to correct them. If unsure use the OCR output as reference.
 If multiple sizes are available provide the biggest one.
 Don't include units.
-The first line must be the CSV header: "{','.join(CSV_HEADER)}".
+The first line must be the CSV header: "{",".join(CSV_HEADER)}".
 Don't add any extra formatting, just output a valid CSV file.
 """
 
@@ -63,11 +62,7 @@ class CBM(Shop):
     def get_locations(cls) -> list[str]:
         html = session.get(LIST_URL).content
         soup = BeautifulSoup(html, "html.parser")
-        return [
-            location
-            for div in soup("div", class_="half")
-            if (location := div["id"]) not in UNSUPPORTED_LOCATIONS
-        ]
+        return [location for div in soup("div", class_="half") if (location := div["id"]) not in UNSUPPORTED_LOCATIONS]
 
     def __init__(self, location: str, timestamp: int | None = None):
         self.location = location
@@ -92,7 +87,7 @@ class CBM(Shop):
             return
         gpt_csv = gpt_csv.strip("```").lstrip("csv").strip()  # common issue, wrap in ```csv
         reader = DictReader(gpt_csv.splitlines())
-        if set(reader.fieldnames) != set(CSV_HEADER):
+        if reader.fieldnames is None or set(reader.fieldnames) != set(CSV_HEADER):
             logger.error(f"Invalid CSV header from ChatGPT: {reader.fieldnames}")
             return
         for beer in reader:

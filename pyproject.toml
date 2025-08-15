@@ -1,2 +1,114 @@
+[project]
+name = "strinks"
+version = "0.1.0"
+description = "Beer cost-performance monitoring"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Beerware"}
+authors = [{name = "Antoine Lecubin", email = "antoinelecubin@msn.com"}]
+
+dependencies = [
+    "Flask>=1.1.2",
+    "beautifulsoup4>=4.9.2",
+    "click>=6.7",
+    "cloudscraper>=1.2.48",
+    "editdistance>=0.5.3",
+    "openai>=1.29.0",
+    "pydantic>=2.0.0",
+    "pykakasi>=2.0.8",
+    "pytesseract>=0.3.10",
+    "python-dotenv>=0.19.2",
+    "requests>=2.24.0",
+    "sqlalchemy>=2.0.0",
+    "sqlalchemy-utils>=0.38.2",
+    "sqlmodel>=0.0.14",
+    "unidecode>=1.1.1",
+    "alembic>=1.13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Zeletochoy/strinks"
+
+[project.scripts]
+strinks-init-db = "strinks.cli.init_db:cli"
+strinks-scrape = "strinks.cli.scrape:cli"
+strinks-fetch-had = "strinks.cli.fetch_had:cli"
+strinks-drop-users = "strinks.cli.drop_users:cli"
+strinks-fetch-breweries = "strinks.cli.fetch_breweries:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.21",
+    "mypy>=1.5",
+    "types-requests",
+    "types-beautifulsoup4",
+    "pre-commit>=3.5",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "DTZ", # flake8-datetimez
+    "T20", # flake8-print
+    "RET", # flake8-return
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "T201",  # print statements (we use them for CLI output)
+    "T203",  # pprint statements
+    "RUF001", # ambiguous unicode (we have Japanese text)
+    "B904",  # raise without from (too many to fix now)
+    "B005",  # strip with multi-char (intentional)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["T20"]  # Allow print in tests
+"strinks/api/shops/__init__.py" = ["F401", "UP035"]  # Will fix separately
+
+[tool.ruff.lint.isort]
+known-first-party = ["strinks"]
+
 [tool.black]
 line-length = 120
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["strinks"]
+omit = ["tests/*", "*/cli/*"]

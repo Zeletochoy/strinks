@@ -1,5 +1,5 @@
 import re
-from typing import Iterator
+from collections.abc import Iterator
 from urllib.parse import urlparse, urlunparse
 
 from bs4 import BeautifulSoup
@@ -50,7 +50,7 @@ class SlopShop(Shop):
         if match is not None:
             ml = int(match.group(1))
         brewery_name = page_json["brand"].lower().strip()
-        beer_name = raw_name[len(brewery_name) + 1:]
+        beer_name = raw_name[len(brewery_name) + 1 :]
         try:
             return ShopBeer(
                 raw_name=raw_name,

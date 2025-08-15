@@ -1,9 +1,6 @@
-from typing import Dict, Optional
-
 from ..settings import UNTAPPD_CLIENT_ID, UNTAPPD_CLIENT_SECRET
 from ..utils import get_retrying_session
 from .structs import UserInfo
-
 
 AUTH_REDIRECT_URL = "https://strinks.zeletochoy.fr/auth"
 UNTAPPD_OAUTH_URL = (
@@ -20,26 +17,31 @@ def untappd_get_oauth_token(auth_code: str) -> str:
     res = session.get(
         "https://untappd.com/oauth/authorize/",
         headers=HEADERS,
-        params=dict(
-            client_id=UNTAPPD_CLIENT_ID,
-            client_secret=UNTAPPD_CLIENT_SECRET,
-            response_type="code",
-            redirect_url=AUTH_REDIRECT_URL,
-            code=auth_code,
-        ),
+        params={
+            "client_id": UNTAPPD_CLIENT_ID,
+            "client_secret": UNTAPPD_CLIENT_SECRET,
+            "response_type": "code",
+            "redirect_url": AUTH_REDIRECT_URL,
+            "code": auth_code,
+        },
     )
     res.raise_for_status()
-    return res.json()["response"]["access_token"]
+    data = res.json()
+    # The Untappd API returns {"response": {"access_token": "..."}} on success
+    access_token = data["response"]["access_token"]
+    if not isinstance(access_token, str):
+        raise ValueError(f"Expected string access_token, got {type(access_token)}")
+    return access_token
 
 
 def untappd_get_user_info(access_token: str) -> UserInfo:
     res = session.get(
         API_URL + "/user/info",
         headers=HEADERS,
-        params=dict(
-            access_token=access_token,
-            compact="true",
-        ),
+        params={
+            "access_token": access_token,
+            "compact": "true",
+        },
     )
     res.raise_for_status()
     user_json = res.json()["response"]["user"]
@@ -53,7 +55,7 @@ def untappd_get_user_info(access_token: str) -> UserInfo:
     )
 
 
-def get_untappd_api_auth_params(access_token: Optional[str] = None) -> Dict[str, str]:
+def get_untappd_api_auth_params(access_token: str | None = None) -> dict[str, str]:
     if access_token is not None:
         return {"access_token": access_token}
     return {"client_id": UNTAPPD_CLIENT_ID, "client_secret": UNTAPPD_CLIENT_SECRET}

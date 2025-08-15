@@ -1,15 +1,14 @@
 import time
 from collections import deque
-from datetime import datetime, timedelta
-from typing import Deque, Optional
+from datetime import timedelta
 
 import cloudscraper
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from ...db import get_db
+from ..utils import JST, now_jst
 from .rank import best_match
 from .structs import FlavorTag, RateLimitError, UntappdBeerResult
-
 
 MAX_REQ_PER_HOUR = 1000
 REQ_COOLDOWN = 5
@@ -19,7 +18,7 @@ session = cloudscraper.create_scraper(allow_brotli=False)
 
 class UntappdWeb:
     def __init__(self):
-        self.last_request_timestamps: Deque[float] = deque(maxlen=MAX_REQ_PER_HOUR)
+        self.last_request_timestamps: deque[float] = deque(maxlen=MAX_REQ_PER_HOUR)
         self.headers = {
             "Referer": "https://untappd.com/home",
             "User-Agent": "Mozilla/5.0 (Linux) Gecko/20100101 Firefox/81.0",
@@ -44,19 +43,61 @@ class UntappdWeb:
                 time.sleep(REQ_COOLDOWN - time_since_last)
         self.last_request_timestamps.append(time.monotonic())
 
-    def _item_to_beer(self, item: BeautifulSoup) -> UntappdBeerResult:
+    def _item_to_beer(self, item: Tag) -> UntappdBeerResult:
+        label = item.find("a", class_="label")
+        if not isinstance(label, Tag):
+            raise ValueError("Could not find beer label")
+
+        href = label.get("href")
+        if not isinstance(href, str):
+            raise ValueError("Beer label has no href")
+
+        img = label.find("img")
+        if not isinstance(img, Tag):
+            raise ValueError("Could not find beer image")
+        img_src = img.get("src")
+        if not isinstance(img_src, str):
+            raise ValueError("Beer image has no src")
+
+        name_elem = item.find("p", class_="name")
+        if not isinstance(name_elem, Tag):
+            raise ValueError("Could not find beer name")
+
+        brewery_elem = item.find("p", class_="brewery")
+        if not isinstance(brewery_elem, Tag):
+            raise ValueError("Could not find brewery")
+
+        style_elem = item.find("p", class_="style")
+        if not isinstance(style_elem, Tag):
+            raise ValueError("Could not find style")
+
+        abv_elem = item.find("p", class_="abv")
+        if not isinstance(abv_elem, Tag):
+            raise ValueError("Could not find ABV")
+
+        ibu_elem = item.find("p", class_="ibu")
+        if not isinstance(ibu_elem, Tag):
+            raise ValueError("Could not find IBU")
+
+        caps_elem = item.find("div", class_="caps")
+        if not isinstance(caps_elem, Tag):
+            raise ValueError("Could not find rating caps")
+        rating_str = caps_elem.get("data-rating")
+        if not isinstance(rating_str, str):
+            raise ValueError("Rating caps has no data-rating")
+
         return UntappdBeerResult(
-            beer_id=int(item.find("a", class_="label")["href"].rsplit("/", 1)[-1]),
-            image_url=item.find("a", class_="label").find("img")["src"],
-            name=item.find("p", class_="name").get_text().strip(),
-            brewery=item.find("p", class_="brewery").get_text().strip(),
-            style=item.find("p", class_="style").get_text().strip(),
-            abv=float(item.find("p", class_="abv").get_text().strip().split("%", 1)[0].replace("N/A", "nan")),
-            ibu=float(item.find("p", class_="ibu").get_text().strip().split(" ", 1)[0].replace("N/A", "nan")),
-            rating=float(item.find("div", class_="caps")["data-rating"]),
+            beer_id=int(href.rsplit("/", 1)[-1]),
+            image_url=img_src,
+            name=name_elem.get_text().strip(),
+            brewery=brewery_elem.get_text().strip(),
+            style=style_elem.get_text().strip(),
+            abv=float(abv_elem.get_text().strip().split("%", 1)[0].replace("N/A", "nan")),
+            ibu=float(ibu_elem.get_text().strip().split(" ", 1)[0].replace("N/A", "nan")),
+            rating=float(rating_str),
         )
 
-    def try_find_beer(self, query: str) -> Optional[UntappdBeerResult]:
+    def try_find_beer(self, query: str) -> UntappdBeerResult | None:
         self.rate_limit()
         try:
             print(f"Untappd query for '{query}'")
@@ -73,7 +114,7 @@ class UntappdWeb:
                 return None
             beers = [self._item_to_beer(item) for item in items]
             best_idx = best_match(query, (f"{beer.brewery} {beer.name}" for beer in beers))
-            beer: Optional[UntappdBeerResult] = beers[best_idx]
+            beer: UntappdBeerResult | None = beers[best_idx]
         except Exception as e:
             print(f"Unexpected exception in UntappdWeb.try_find_beer: {e}")
             raise RateLimitError()
@@ -90,18 +131,23 @@ class UntappdWeb:
                 raise RateLimitError()
             soup = BeautifulSoup(res.text, "html.parser")
             item = soup.find("div", class_="content")
-            if item is None:
+            if not isinstance(item, Tag):
                 raise KeyError(f"Beer with ID {beer_id} not found on untappd")
             beer = self._item_to_beer(item)
         except Exception:
             raise RateLimitError()
         return beer
 
-    def _get_beer_from_db(self, beer_id: int) -> Optional[UntappdBeerResult]:
+    def _get_beer_from_db(self, beer_id: int) -> UntappdBeerResult | None:
         beer = self.db.get_beer(beer_id)
-        if beer is None or datetime.now() - beer.updated_at > BEER_CACHE_TIME:
-            if beer is not None:
-                print(f"Updating {beer}...")
+        if beer is None:
+            return None
+        # Handle both naive and aware datetimes for backward compatibility
+        updated_at = beer.updated_at
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=JST)
+        if now_jst() - updated_at > BEER_CACHE_TIME:
+            print(f"Updating {beer}...")
             return None
         return UntappdBeerResult(
             beer_id=beer.beer_id,

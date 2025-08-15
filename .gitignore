@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Testing
+.tox/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+strinks/db.sqlite
+tmp.sqlite
+*.cache.json
+untappd_cache.json
+deepl_cache.json
+brewery_cache.json
+.env
+*.id_rsa
+*.id_rsa.pub
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# uv
+uv.lock
+
+# macOS
+.DS_Store

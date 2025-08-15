@@ -1,13 +1,10 @@
 import re
-from typing import Iterator
-
-from bs4 import BeautifulSoup
+from collections.abc import Iterator
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-
 
 session = get_retrying_session()
 
@@ -16,15 +13,15 @@ class DigTheLine(Shop):
     short_name = "digtheline"
     display_name = "Dig The Line"
 
-    def _iter_pages(self) -> Iterator[BeautifulSoup]:
+    def _iter_pages(self) -> Iterator[dict]:
         i = 0
         while True:
             url = (
                 "https://www.searchanise.com/getresults?api_key=9f4Z4f8b4y&q=&sortBy=collection_155521319017_position"
-                f"&sortOrder=asc&startIndex={40*i}&maxResults=40&items=true"
+                f"&sortOrder=asc&startIndex={40 * i}&maxResults=40&items=true"
                 "&pages=true&categories=true&suggestions=true&queryCorrection=true&suggestionsMaxResults=3"
                 "&pageStartIndex=0&pagesMaxResults=20&categoryStartIndex=0&categoriesMaxResults=20&facets=true"
-                f"&facetsShowUnavailableOptions=false&ResultsTitleStrings=2&ResultsDescriptionStrings=0&page={i+1}"
+                f"&facetsShowUnavailableOptions=false&ResultsTitleStrings=2&ResultsDescriptionStrings=0&page={i + 1}"
                 "&collection=beer&output=json&_=1675839570448"
             )
             yield session.get(url).json()
