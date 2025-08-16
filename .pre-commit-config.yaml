@@ -36,6 +36,7 @@ repos:
             "sqlalchemy[mypy]",
             "sqlmodel>=0.0.14",
             "pydantic>=2.0.0",
+            "alembic>=1.16.0",
           ]
 
   - repo: https://github.com/asottile/pyupgrade

@@ -20,7 +20,7 @@ class Beer(SQLModel, table=True):
     abv: float
     ibu: float | None = None
     rating: float
-    updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     description: str | None = None
 
     offerings: list["Offering"] = Relationship(back_populates="beer")
@@ -56,10 +56,10 @@ class Brewery(SQLModel, table=True):
 class BeerTag(SQLModel, table=True):
     __tablename__ = "beer_tags"
 
-    beer_id: int = Field(foreign_key="beers.beer_id", primary_key=True)
+    beer_id: int = Field(foreign_key="beers.beer_id", primary_key=True, index=True)
     beer: Beer = Relationship(back_populates="tags")
 
-    tag_id: int = Field(foreign_key="flavor_tags.tag_id", primary_key=True)
+    tag_id: int = Field(foreign_key="flavor_tags.tag_id", primary_key=True, index=True)
     tag: "FlavorTag" = Relationship(back_populates="beers")
 
     count: int
@@ -84,7 +84,7 @@ class Shop(SQLModel, table=True):
     __tablename__ = "shops"
 
     shop_id: int = Field(primary_key=True)
-    name: str = Field(index=True, unique=True)
+    name: str
     url: str
     image_url: str
     shipping_fee: int
@@ -111,7 +111,7 @@ class Offering(SQLModel, table=True):
     url: str
     milliliters: int
     price: int
-    updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), primary_key=True))
+    updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, primary_key=True))
     image_url: str | None = None
 
     @property
@@ -129,11 +129,11 @@ class User(SQLModel, table=True):
     __tablename__ = "users"
 
     id: int = Field(primary_key=True)
-    user_name: str = Field(index=True, unique=True)
-    first_name: str | None = None
-    last_name: str | None = None
-    avatar_url: str | None = None
-    access_token: str | None = None
+    user_name: str
+    first_name: str
+    last_name: str
+    avatar_url: str
+    access_token: str
 
     ratings: list["UserRating"] = Relationship(back_populates="user")
 
@@ -161,4 +161,17 @@ class UserRating(SQLModel, table=True):
     beer: Beer = Relationship(back_populates="ratings")
 
     rating: float
-    updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class UntappdCache(SQLModel, table=True):
+    """Cache for Untappd beer search results."""
+
+    __tablename__ = "untappd_cache"
+
+    id: int | None = Field(default=None, primary_key=True)
+    query: str = Field(unique=True, index=True)  # The search query
+    beer_id: int | None = Field(default=None, foreign_key="beers.beer_id")  # None for not found
+    beer: Beer | None = Relationship()
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
+    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
