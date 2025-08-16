@@ -79,9 +79,19 @@ def auth():
     try:
         code = request.args["code"]
     except KeyError:
-        return "Missing code", 400
-    access_token = untappd_get_oauth_token(code)
-    user_info = untappd_get_user_info(access_token)
+        return "Missing authorization code", 400
+
+    try:
+        access_token = untappd_get_oauth_token(code)
+        user_info = untappd_get_user_info(access_token)
+    except ValueError as e:
+        # Log the error for debugging
+        app.logger.error(f"OAuth error: {e}")
+        return f"Authentication failed: {e}", 400
+    except Exception as e:
+        app.logger.error(f"Unexpected error during OAuth: {e}")
+        return "Authentication failed due to an unexpected error", 500
+
     resp = make_response(redirect("/"))
     db = get_db()
     user = db.get_user(user_info.user_id)

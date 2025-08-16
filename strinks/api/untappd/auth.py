@@ -27,6 +27,18 @@ def untappd_get_oauth_token(auth_code: str) -> str:
     )
     res.raise_for_status()
     data = res.json()
+
+    # Handle error responses from Untappd
+    if not isinstance(data, dict):
+        raise ValueError(f"Unexpected response format from Untappd: {data}")
+
+    if "error" in data:
+        error_msg = data.get("error_detail", data.get("error", "Unknown error"))
+        raise ValueError(f"Untappd OAuth error: {error_msg}")
+
+    if "response" not in data or "access_token" not in data.get("response", {}):
+        raise ValueError(f"Invalid response structure from Untappd: {data}")
+
     # The Untappd API returns {"response": {"access_token": "..."}} on success
     access_token = data["response"]["access_token"]
     if not isinstance(access_token, str):
@@ -44,7 +56,20 @@ def untappd_get_user_info(access_token: str) -> UserInfo:
         },
     )
     res.raise_for_status()
-    user_json = res.json()["response"]["user"]
+    data = res.json()
+
+    # Handle error responses from Untappd
+    if not isinstance(data, dict):
+        raise ValueError(f"Unexpected response format from Untappd: {data}")
+
+    if "meta" in data and data["meta"].get("http_code") != 200:
+        error_msg = data["meta"].get("error_detail", "Unknown error")
+        raise ValueError(f"Untappd API error: {error_msg}")
+
+    if "response" not in data or "user" not in data.get("response", {}):
+        raise ValueError(f"Invalid response structure from Untappd: {data}")
+
+    user_json = data["response"]["user"]
     return UserInfo(
         user_id=user_json["id"],
         user_name=user_json["user_name"],
