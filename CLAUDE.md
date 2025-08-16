@@ -142,8 +142,7 @@ Optional:
 
 ### Important Files
 
-- `strinks/api/untappd/untappd_cache.json` - Legacy JSON cache for Untappd beer lookups (being migrated to SQLite)
-- `strinks/db.sqlite` - Main SQLite database
+- `strinks/db.sqlite` - Main SQLite database (includes Untappd cache in untappd_cache table)
 - `strinks/api/translation.py` - Japanese brewery name translations
 - `strinks/api/shops/__init__.py` - Base shop scraper interface
 - `alembic/` - Database migration scripts

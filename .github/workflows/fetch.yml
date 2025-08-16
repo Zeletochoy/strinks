@@ -43,13 +43,11 @@ jobs:
           pip install -U pip
           pip install -e .
 
-      - name: Download DB and cache
+      - name: Download DB
         run: |
           rsync -P ${USER}@${HOST}:${ROOT}/strinks/db.sqlite strinks/
-          rsync -P ${USER}@${HOST}:${ROOT}/strinks/api/untappd/untappd_cache.json strinks/api/untappd/
           ls -la
           ls -la strinks
-          ls -la strinks/api/untappd
         env:
           USER: ${{ secrets.DEPLOY_USER }}
           HOST: ${{ secrets.DEPLOY_HOST }}
@@ -73,10 +71,8 @@ jobs:
           UNTAPPD_CLIENT_SECRET: ${{ secrets.UNTAPPD_CLIENT_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: Upload DB and cache
-        run: |
-          rsync -P strinks/db.sqlite ${USER}@${HOST}:${ROOT}/strinks/
-          rsync -P strinks/api/untappd/untappd_cache.json ${USER}@${HOST}:${ROOT}/strinks/api/untappd/
+      - name: Upload DB
+        run: rsync -P strinks/db.sqlite ${USER}@${HOST}:${ROOT}/strinks/
         env:
           USER: ${{ secrets.DEPLOY_USER }}
           HOST: ${{ secrets.DEPLOY_HOST }}
