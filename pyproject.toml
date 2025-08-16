@@ -75,6 +75,8 @@ ignore = [
     "T201",  # print statements (we use them for CLI output)
     "T203",  # pprint statements
     "RUF001", # ambiguous unicode (we have Japanese text)
+    "RUF002", # ambiguous unicode in docstrings (documenting Japanese patterns)
+    "RUF003", # ambiguous unicode in comments (documenting Japanese patterns)
     "B904",  # raise without from (too many to fix now)
     "B005",  # strip with multi-char (intentional)
 ]
