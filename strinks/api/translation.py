@@ -1,30 +1,22 @@
-import atexit
-import json
-from pathlib import Path
-
 import pykakasi
 
+from ..db import get_db
+from .deepl_cache import DeepLSQLiteCache
 from .settings import DEEPL_API_KEY
 from .utils import get_retrying_session
 
 session = get_retrying_session()
 
-
-DEEPL_CACHE_PATH = Path(__file__).with_name("deepl_cache.json")
-DEEPL_CACHE: dict[str, str]
-try:
-    with open(DEEPL_CACHE_PATH) as f:
-        DEEPL_CACHE = json.load(f)
-except OSError:
-    DEEPL_CACHE = {}
+# Initialize SQLite cache
+_cache = None
 
 
-def save_cache():
-    with open(DEEPL_CACHE_PATH, "w") as f:
-        json.dump(DEEPL_CACHE, f)
-
-
-atexit.register(save_cache)
+def get_deepl_cache() -> DeepLSQLiteCache:
+    """Get or create the DeepL cache instance."""
+    global _cache
+    if _cache is None:
+        _cache = DeepLSQLiteCache(get_db())
+    return _cache
 
 
 BREWERY_JP_EN = {
@@ -84,8 +76,14 @@ def has_japanese(text: str) -> bool:
 
 
 def deepl_translate(text: str) -> str:
-    if text in DEEPL_CACHE:
-        return DEEPL_CACHE[text]
+    cache = get_deepl_cache()
+
+    # Check cache first
+    cached = cache.get(text)
+    if cached is not None:
+        return cached
+
+    # Not in cache, call DeepL API
     res = session.get(
         "https://api-free.deepl.com/v2/translate",
         params={
@@ -99,7 +97,7 @@ def deepl_translate(text: str) -> str:
     try:
         data = res.json()
         translation: str = data["translations"][0]["text"]
-        DEEPL_CACHE[text] = translation
+        cache.set(text, translation)
     except Exception as e:
         print(f"DeepL translation failed: {e}")
         translation = text

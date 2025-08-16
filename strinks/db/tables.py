@@ -175,3 +175,12 @@ class UntappdCache(SQLModel, table=True):
     beer: Beer | None = Relationship()
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
     expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
+
+
+class DeepLCache(SQLModel, table=True):
+    """Cache for DeepL translations."""
+
+    __tablename__ = "deepl_cache"
+
+    source_text: str = Field(primary_key=True)  # Japanese text to translate
+    translated_text: str  # English translation
