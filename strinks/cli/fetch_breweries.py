@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
-from strinks.api.untappd import UntappdAPI
+from strinks.api.untappd import UntappdClient
 from strinks.db import BeerDB, get_db
 from strinks.db.tables import Beer, Brewery, Offering
 
@@ -17,7 +17,7 @@ def fetch_breweries(db: BeerDB, verbose: bool) -> None:
 
     Prioritizes breweries by number of beers with current offerings.
     """
-    untappd = UntappdAPI()
+    untappd = UntappdClient()  # Uses backend rotation automatically
 
     # Get breweries ordered by number of beers with current offerings
     beer_count_col = func.count(func.distinct(Beer.beer_id))
@@ -33,6 +33,7 @@ def fetch_breweries(db: BeerDB, verbose: bool) -> None:
     if verbose:
         logger.info(f"Found {len(brewery_beer_counts)} unique breweries to fetch")
 
+    processed = 0
     for brewery_name, beer_count in brewery_beer_counts:
         # Check if brewery already exists
         statement = select(Brewery).where(Brewery.name == brewery_name)
@@ -47,16 +48,18 @@ def fetch_breweries(db: BeerDB, verbose: bool) -> None:
                     beer.brewery_id = existing_brewery.brewery_id
                 if verbose:
                     logger.info(f"Linked {len(beers_to_update)} beers to existing brewery: {existing_brewery}")
+            processed += 1
             continue
 
         if verbose:
             logger.info(f"Searching for: {brewery_name} ({beer_count} beers with offerings)")
 
-        # Search for brewery on Untappd
+        # Search for brewery on Untappd - UntappdClient handles rate limits automatically
         brewery_results = untappd.search_breweries(brewery_name)
         if not brewery_results:
             if verbose:
                 logger.warning(f"  No results found for: {brewery_name}")
+            processed += 1
             continue
 
         # Use the first result (usually best match)
@@ -83,6 +86,10 @@ def fetch_breweries(db: BeerDB, verbose: bool) -> None:
         except IntegrityError:
             if verbose:
                 logger.warning(f"  Brewery already exists: {brewery_result.name}")
+
+        processed += 1
+
+    logger.info(f"Successfully processed all {processed} breweries")
 
 
 @click.command()

@@ -8,7 +8,7 @@ from ..utils import now_jst
 from .api import UntappdAPI
 from .auth import UNTAPPD_OAUTH_URL, UserInfo, untappd_get_oauth_token, untappd_get_user_info
 from .cache import CacheStatus, UntappdSQLiteCache
-from .structs import RateLimitError, UntappdBeerResult, UserRating
+from .structs import RateLimitError, UntappdBeerResult, UntappdBreweryResult, UserRating
 from .web import UntappdWeb
 
 MIN_SECS_BETWEEN_RESTARTS = 300  # 5min
@@ -86,6 +86,25 @@ class UntappdClient:
                     if res is not None:
                         return res, query
         return None
+
+    def search_breweries(self, query: str) -> list[UntappdBreweryResult]:
+        """Search for breweries with automatic backend rotation on rate limit."""
+        if (now_jst() - self.last_time_at_first).total_seconds() > 3600:  # rate limit resets every hour
+            self.backend_idx = 0
+            self.last_time_at_first = now_jst()
+
+        while True:
+            try:
+                # Only UntappdAPI supports brewery search, not UntappdWeb
+                if isinstance(self.current_backend, UntappdAPI):
+                    return self.current_backend.search_breweries(query)
+                # Skip web backend for brewery search
+                self.next_backend()
+                if self.backend_idx == 0:
+                    # Went through all backends, none support brewery search
+                    return []
+            except RateLimitError:
+                self.next_backend()
 
     def iter_had_beers(
         self, user_id: int | None = None, from_time: datetime | None = None
