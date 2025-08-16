@@ -1,3 +1,4 @@
+import logging
 from typing import NamedTuple
 
 import click
@@ -8,6 +9,7 @@ from strinks.api.untappd import UntappdClient
 from strinks.db import BeerDB, get_db
 
 SHOP_MAP = get_shop_map()
+logger = logging.getLogger(__name__)
 
 
 class ScrapeSummary(NamedTuple):
@@ -28,12 +30,14 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
         res = untappd.try_find_beer(offering)
         if res is None:
             if verbose:
-                print(f"{offering.raw_name}: Not found on Untappd")
+                logger.debug(f"{offering.raw_name}: Not found on Untappd")
             continue
         num_untappd += 1
         beer, query = res
         if verbose:
-            print(f"[Shop] '{offering.raw_name}' -> [Query] '{query}' -> [Untappd] '{beer.brewery} - {beer.name}'")
+            logger.debug(
+                f"[Shop] '{offering.raw_name}' -> [Query] '{query}' -> [Untappd] '{beer.brewery} - {beer.name}'"
+            )
         try:
             with db.commit_or_rollback():
                 db_beer = db.insert_beer(
@@ -50,7 +54,7 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
                 found_ids.add(beer.beer_id)
         except IntegrityError:
             if verbose:
-                print(f"Beer with ID {beer.beer_id} already in DB ({beer.brewery} - {beer.name})")
+                logger.debug(f"Beer with ID {beer.beer_id} already in DB ({beer.brewery} - {beer.name})")
         with db.commit_or_rollback():
             db.insert_offering(
                 shop=db_shop,
@@ -60,7 +64,7 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
                 price=offering.price,
                 image_url=offering.image_url,
             )
-        print(f"- {beer.brewery} - {beer.name}: {offering.price}¥ ({offering.milliliters}mL)")
+        logger.info(f"  {beer.brewery} - {beer.name}: {offering.price}¥ ({offering.milliliters}mL)")
     with db.commit_or_rollback():
         db.remove_expired_offerings(db_shop, found_ids)
     return ScrapeSummary(num_found, num_untappd)
@@ -77,6 +81,15 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
 @click.option("-s", "--shop-name", type=click.Choice(list(SHOP_MAP)), default=None, help="Shop name, default: all")
 @click.option("-v", "--verbose", is_flag=True, help="Display debug info")
 def cli(database: click.Path | None, shop_name: str | None, verbose: bool):
+    # Set up logging
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(message)s",  # Simple format, just the message
+    )
+
+    # Silence HTTP request logs from urllib3 (used by requests)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
     shops = [cls() for _, cls in SHOP_MAP.items()] if shop_name is None else [SHOP_MAP[shop_name]()]
 
     untappd = UntappdClient()
@@ -86,18 +99,18 @@ def cli(database: click.Path | None, shop_name: str | None, verbose: bool):
 
     try:
         for shop in shops:
-            print(f"Scraping {shop.display_name}")
+            logger.info(f"\n[{shop.display_name}]")
             try:
                 shop_summary = scrape_shop(shop, db, untappd, verbose)
                 summary[shop.display_name] = str(shop_summary)
             except Exception:
                 from traceback import format_exc
 
-                formatted = f"Error: {format_exc()}"
+                formatted = f"Error: {format_exc()}" if verbose else "Error: Failed to scrape shop"
                 summary[shop.display_name] = formatted
-                print(formatted)
+                logger.error(formatted)
     finally:
-        print("=" * 10, "Summary", "=" * 10)
+        logger.info("\n" + "=" * 30 + " Summary " + "=" * 30)
         for shop_name, summary_str in summary.items():
-            print(f"- {shop_name}: {summary_str}")
-    print("Done.")
+            logger.info(f"{shop_name}: {summary_str}")
+    logger.info("Done.")
