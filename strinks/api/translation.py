@@ -11,6 +11,7 @@ session = get_retrying_session()
 
 
 DEEPL_CACHE_PATH = Path(__file__).with_name("deepl_cache.json")
+DEEPL_CACHE: dict[str, str]
 try:
     with open(DEEPL_CACHE_PATH) as f:
         DEEPL_CACHE = json.load(f)
@@ -84,7 +85,7 @@ def has_japanese(text: str) -> bool:
 
 def deepl_translate(text: str) -> str:
     if text in DEEPL_CACHE:
-        return text
+        return DEEPL_CACHE[text]
     res = session.get(
         "https://api-free.deepl.com/v2/translate",
         params={

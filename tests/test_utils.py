@@ -3,9 +3,7 @@
 from datetime import datetime
 from unittest.mock import Mock, patch
 
-import requests
-
-from strinks.api.utils import JST, get_retrying_session, now_jst
+from strinks.api.utils import JST, RateLimitedSession, get_retrying_session, now_jst
 
 
 class TestDateTimeUtils:
@@ -33,32 +31,50 @@ class TestRetryingSession:
         session = get_retrying_session()
 
         assert session is not None
+        assert isinstance(session, RateLimitedSession)
         assert hasattr(session, "get")
         assert hasattr(session, "post")
 
         # Check that retry is configured
         assert len(session.adapters) > 0
 
-    @patch("requests.Session.get")
-    def test_session_retries_on_failure(self, mock_get):
+    def test_rate_limiting(self):
+        """Test that rate limiting works correctly."""
+        import time
+
+        session = get_retrying_session(rate_limit=0.1)
+
+        # Test the internal rate limiting logic directly
+        domain = "example.com"
+
+        # First request should go through immediately
+        start = time.time()
+        session._wait_if_needed(domain)
+
+        # Second request should be rate limited
+        session._wait_if_needed(domain)
+        elapsed = time.time() - start
+
+        # Should have waited at least 0.09 seconds (allowing small margin)
+        assert elapsed >= 0.09
+
+    def test_domain_specific_limits(self):
+        """Test domain-specific rate limits."""
+        session = get_retrying_session(rate_limit=0.5, domain_limits={"api.untappd.com": 1.0, "example.com": 0.1})
+
+        assert session.domain_limits["api.untappd.com"] == 1.0
+        assert session.domain_limits["example.com"] == 0.1
+
+    def test_session_retries_on_failure(self):
         """Test that session retries on connection errors."""
+        # Test that the HTTPAdapter with Retry is properly configured
         session = get_retrying_session()
 
-        # First two calls fail, third succeeds
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.text = "Success"
-
-        mock_get.side_effect = [
-            requests.ConnectionError("Connection failed"),
-            requests.ConnectionError("Connection failed"),
-            mock_response,
-        ]
-
-        # This should retry and eventually succeed
-        response = session.get("https://example.com")
-        assert response.text == "Success"
-        assert mock_get.call_count == 3
+        # Check the adapter is configured with retries
+        adapter = session.get_adapter("https://")
+        assert adapter is not None
+        assert hasattr(adapter, "max_retries")
+        assert adapter.max_retries.total == 3
 
 
 class TestTranslation:

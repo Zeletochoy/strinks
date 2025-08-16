@@ -156,6 +156,14 @@ Required for full functionality:
 - Fixtures properly scoped to avoid conflicts
 - Integration tests marked with `@pytest.mark.integration`
 
+### Rate Limiting
+
+- `RateLimitedSession` class provides per-domain rate limiting
+- Default 0.5s between requests, configurable per domain
+- Thread-safe with locks for concurrent requests
+- Untappd API has 1s rate limit configured
+- Usage: `get_retrying_session(rate_limit=0.5, domain_limits={"api.example.com": 1.0})`
+
 ### Shop Scrapers
 
 - `ShopBeer` now uses Pydantic BaseModel (not attrs)

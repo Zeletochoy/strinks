@@ -12,7 +12,11 @@ from .rank import best_match
 from .structs import FlavorTag, RateLimitError, UntappdBeerResult, UntappdBreweryResult, UserRating
 
 logger = logging.getLogger(__name__)
-session = get_retrying_session()
+# Set up rate-limited session with Untappd-specific limits
+session = get_retrying_session(
+    rate_limit=0.5,  # Default rate limit
+    domain_limits={"api.untappd.com": 1.0},  # 1 second between Untappd API calls
+)
 
 REQUEST_COOLDOWN = timedelta(seconds=1)
 RATE_LIMIT_COOLDOWN = timedelta(minutes=10)
