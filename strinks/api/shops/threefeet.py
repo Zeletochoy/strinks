@@ -16,10 +16,11 @@ class Threefeet(Shop):
     def _iter_pages(self) -> Iterator[dict]:
         i = 1
         while True:
+            # Removed category filter as it was returning no results
             url = (
                 "https://cdn5.editmysite.com/app/store/api/v23/editor/users/139134080/sites/763710076392842546/"
-                f"products?page={i}&per_page=180&sort_by=created_date&sort_order=desc&categories[]="
-                "11ec1ebe1a8b6fc0b14a86224c9e9feb&include=images,media_files,discounts&excluded_fulfillment=dine_in"
+                f"products?page={i}&per_page=180&sort_by=created_date&sort_order=desc"
+                "&include=images,media_files,discounts&excluded_fulfillment=dine_in"
             )
             yield session.get(url).json()
             i += 1
@@ -35,10 +36,16 @@ class Threefeet(Shop):
         price = page_json["price"]["high"]
         image_url = page_json["images"]["data"][0]["absolute_url"]
         url = "https://3feet.bansha9.com" + page_json["site_link"]
-        desc = page_json["seo_page_description"]
 
-        # Use parsing utility for milliliters
-        ml = parse_milliliters(desc)
+        # Volume is now in short_description field as HTML
+        short_desc = page_json.get("short_description", "")
+
+        # Use parsing utility for milliliters - check both short_description and seo_page_description
+        ml = parse_milliliters(short_desc)
+        if ml is None:
+            # Fallback to seo_page_description
+            desc = page_json.get("seo_page_description", "")
+            ml = parse_milliliters(desc)
         if ml is None:
             raise NotABeerError
 

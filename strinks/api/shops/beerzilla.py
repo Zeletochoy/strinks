@@ -25,9 +25,10 @@ class Beerzilla(Shop):
     def _iter_pages(self) -> Iterator[BeautifulSoup]:
         i = 1
         while True:
+            # Updated to use the new collection URL (新着商品 = new arrivals)
             url = (
                 "https://tokyo-beerzilla.myshopify.com/collections/"
-                "%E3%82%AF%E3%83%A9%E3%83%95%E3%83%88%E3%83%93%E3%83%BC%E3%83%AB"
+                "%E6%96%B0%E7%9D%80%E5%95%86%E5%93%81"
                 f"?filter.v.availability=1&page={i}&sort_by=created-descending"
             )
             page = session.get(url).text

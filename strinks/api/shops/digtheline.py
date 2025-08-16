@@ -39,7 +39,8 @@ class DigTheLine(Shop):
 
     def _parse_beer_page(self, beer_item: dict) -> ShopBeer:
         title = beer_item["title"].lower()
-        match = re.match(r"^(.*) \d{1,2}(?:[.]\d{1,2})?% (\d{2,3}(?:[.]\d{1,2})?)cl$", title)
+        # Updated pattern: now uses ml instead of cl
+        match = re.match(r"^(.*) \d{1,2}(?:[.]\d{1,2})?% (\d{3,4})ml", title)
         if match is None:
             raise NotABeerError
         beer_name = match.group(1)
@@ -48,10 +49,8 @@ class DigTheLine(Shop):
         except KeyError:
             brewery_name = beer_item["tags"].split("[", 1)[0].lower()
         brewery_name = brewery_name.replace("brasserie ", "")
-        ml = float(match.group(2))
-        if ml < 100:
-            ml *= 10
-        ml = int(ml)
+        # Now directly in ml, no conversion needed
+        ml = int(match.group(2))
         price = int(float(beer_item["price"]))
         return ShopBeer(
             beer_name=beer_name,
