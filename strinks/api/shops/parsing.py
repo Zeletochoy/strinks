@@ -6,6 +6,26 @@ Based on actual patterns used across existing scrapers.
 import re
 
 
+def keep_until_japanese(text: str) -> str:
+    """Keep characters until first Japanese character.
+
+    From utils.py, used by beerzilla.py.
+
+    Args:
+        text: Text to process
+
+    Returns:
+        Text up to but not including first Japanese character
+    """
+    chars = []
+    for c in text:
+        if ord(c) < 0x3000:  # first japanese characters
+            chars.append(c)
+        else:
+            break
+    return "".join(chars)
+
+
 def normalize_numbers(text: str) -> str:
     """Convert full-width numbers to half-width.
 
@@ -47,8 +67,10 @@ def parse_milliliters(text: str) -> int | None:
     patterns = [
         r"容量:(\d+)ml",  # ichigo - specific format
         r"【ml】[^0-9]*(\d+)",  # volta - bracketed format
+        r"Volume (\d+)mL",  # drinkup - English label
         r"/(\d+)ml",  # chouseiya - with slash
         r"(\d{3,4})ml",  # hopbuds, maruho - 3-4 digits
+        r"(\d+)\s*ml",  # Allow space before ml
         r"(\d+)ml",  # threefeet, gbf - any digits
         r"(\d+)ｍｌ",  # Japanese ml
     ]
@@ -59,6 +81,50 @@ def parse_milliliters(text: str) -> int | None:
             return int(match.group(1))
 
     return None
+
+
+def parse_centiliters(text: str) -> int | None:
+    r"""Extract centiliters and convert to milliliters.
+
+    From digtheline.py: r"(\d{2,3}(?:[.]\d{1,2})?)cl$"
+
+    Args:
+        text: Text potentially containing volume in cl
+
+    Returns:
+        Volume in milliliters, or None if not found
+    """
+    text_lower = text.lower()
+
+    # Match cl patterns
+    match = re.search(r"(\d{1,3}(?:[.]\d{1,2})?)cl", text_lower)
+    if match:
+        cl = float(match.group(1))
+        ml = cl * 10
+        # digtheline logic: if ml < 100: ml *= 10 (but this seems wrong for cl->ml)
+        return int(ml)
+
+    return None
+
+
+def parse_volume_ml(text: str) -> int | None:
+    """Parse volume from text, handling both ml and cl.
+
+    Tries ml first, then cl.
+
+    Args:
+        text: Text potentially containing volume
+
+    Returns:
+        Volume in milliliters, or None if not found
+    """
+    # Try ml first
+    ml = parse_milliliters(text)
+    if ml is not None:
+        return ml
+
+    # Try cl
+    return parse_centiliters(text)
 
 
 def parse_price(text: str) -> int | None:
@@ -108,8 +174,17 @@ def clean_beer_name(text: str) -> str:
     # Remove Japanese brackets (goodbeer, antenna)
     text = re.sub(r"【[^】]*】", "", text)
 
+    # Remove square brackets (volta)
+    text = re.sub(r"\s*\[[^]]+\]\s*", "", text)
+
     # Remove volume in parentheses (antenna pattern)
     text = re.split(r"\([0-9０-９]+(ml|ｍｌ)\)", text)[0]
+
+    # Remove arrival date info (volta)
+    text = re.sub(r"\s*\(\d\d?/\d\d?入荷予定\)", "", text)
+
+    # Remove bottle size indicators (ohtsuki)
+    text = re.sub(r"\s*(大瓶|初期|Magnum|Jeroboam|alc[.].*)*$", "", text)
 
     # Remove specific terms (goodbeer)
     text = text.replace("限定醸造", "")
@@ -141,6 +216,7 @@ def extract_brewery_beer(text: str) -> tuple[str | None, str | None]:
         "／",  # drinkup (full-width slash)
         " / ",  # Common pattern
         "/",  # volta
+        "　",  # Full-width space (volta)
     ]
 
     for sep in separators:
@@ -169,6 +245,7 @@ def is_beer_set(text: str) -> bool:
     # Indicators from actual scrapers
     set_indicators = [
         "本セット",  # antenna - Japanese "bottles set"
+        "セット",  # drinkup - Japanese "set"
         "pack",  # Common English
         "case",  # Common English
     ]
@@ -179,7 +256,9 @@ def is_beer_set(text: str) -> bool:
 def extract_brewery_from_description(text: str) -> str | None:
     """Extract brewery name from description text.
 
-    Based on antenna.py: re.search(r"ブリュワリー：([^<]+)<", desc)
+    Based on:
+    - antenna.py: re.search(r"ブリュワリー：([^<]+)<", desc)
+    - drinkup.py: re.search("醸造所:.*/([^\n]*)", desc_text)
 
     Args:
         text: Description text potentially containing brewery
@@ -187,9 +266,19 @@ def extract_brewery_from_description(text: str) -> str | None:
     Returns:
         Brewery name or None
     """
+    text_lower = text.lower()
+
     # antenna pattern for brewery in description
-    match = re.search(r"ブリュワリー：([^<]+)<", text.lower())
+    match = re.search(r"ブリュワリー：([^<]+)<", text_lower)
     if match:
         return match.group(1).strip()
+
+    # drinkup pattern for brewery
+    match = re.search(r"醸造所:.*/([^\n]*)", text)
+    if match:
+        brewery = match.group(1).strip()
+        # Remove common suffixes (from drinkup)
+        brewery = re.sub(r"( (Beer|Brewery) )?Co\.", "", brewery)
+        return brewery.lower() if brewery else None
 
     return None
