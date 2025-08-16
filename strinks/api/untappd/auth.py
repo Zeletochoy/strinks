@@ -1,3 +1,5 @@
+import os
+
 from ..settings import UNTAPPD_CLIENT_ID, UNTAPPD_CLIENT_SECRET
 from ..utils import get_retrying_session
 from .structs import UserInfo
@@ -10,7 +12,11 @@ UNTAPPD_OAUTH_URL = (
 API_URL = "https://api.untappd.com/v4"
 HEADERS = {"User-Agent": f"Strinks ({UNTAPPD_CLIENT_ID})"}
 
-session = get_retrying_session()
+# Use proxy for OAuth requests if configured (to bypass Cloudflare blocks)
+
+proxy_url = os.getenv("UNTAPPD_OAUTH_PROXY")  # e.g., "http://user:pass@proxy-server:8888"
+proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
+session = get_retrying_session(proxies=proxies)
 
 
 def untappd_get_oauth_token(auth_code: str) -> str:

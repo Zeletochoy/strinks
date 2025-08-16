@@ -83,6 +83,7 @@ def get_retrying_session(
     max_retries: int = 3,
     rate_limit: float = 0.5,
     domain_limits: dict[str, float] | None = None,
+    proxies: dict[str, str] | None = None,
 ) -> RateLimitedSession:
     """Create a session with retry logic and rate limiting.
 
@@ -90,11 +91,16 @@ def get_retrying_session(
         max_retries: Maximum number of retries for failed requests
         rate_limit: Default seconds between requests per domain
         domain_limits: Optional per-domain rate limits
+        proxies: Optional proxy configuration dict
 
     Returns:
         RateLimitedSession with configured retry and rate limiting
     """
     sess = RateLimitedSession(default_rate_limit=rate_limit)
+
+    # Set proxies if provided
+    if proxies:
+        sess.proxies.update(proxies)
 
     # Configure retries
     retries = Retry(
