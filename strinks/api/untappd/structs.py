@@ -15,10 +15,17 @@ class UntappdBeerResult(BaseModel):
     image_url: str
     name: str
     brewery: str
+    brewery_id: int | None = None
+    brewery_country: str | None = None
+    brewery_city: str | None = None
+    brewery_state: str | None = None
     style: str
     abv: float
     ibu: float
     rating: float
+    weighted_rating: float | None = None
+    rating_count: int | None = None
+    total_user_count: int | None = None
     description: str | None = None
     tags: set[FlavorTag] | None = None
 

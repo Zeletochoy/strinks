@@ -45,10 +45,17 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
                     image_url=beer.image_url,
                     name=beer.name,
                     brewery=beer.brewery,
+                    brewery_id=beer.brewery_id,
+                    brewery_country=beer.brewery_country,
+                    brewery_city=beer.brewery_city,
+                    brewery_state=beer.brewery_state,
                     style=beer.style,
                     abv=beer.abv,
                     ibu=beer.ibu,
                     rating=beer.rating,
+                    weighted_rating=beer.weighted_rating,
+                    rating_count=beer.rating_count,
+                    total_user_count=beer.total_user_count,
                     description=beer.description,
                 )
                 found_ids.add(beer.beer_id)

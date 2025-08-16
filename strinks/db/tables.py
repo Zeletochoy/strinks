@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import ClassVar
 
@@ -15,17 +17,22 @@ class Beer(SQLModel, table=True):
     beer_id: int = Field(primary_key=True)
     image_url: str
     name: str
-    brewery: str
+    brewery: str  # Keep for backward compatibility, will migrate later
+    brewery_id: int | None = Field(default=None, foreign_key="breweries.brewery_id")
     style: str
     abv: float
     ibu: float | None = None
     rating: float
+    weighted_rating: float | None = None
+    rating_count: int | None = None
+    total_user_count: int | None = None
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     description: str | None = None
 
-    offerings: list["Offering"] = Relationship(back_populates="beer")
-    ratings: list["UserRating"] = Relationship(back_populates="beer")
-    tags: list["BeerTag"] = Relationship(back_populates="beer")
+    brewery_rel: Brewery | None = Relationship()
+    offerings: list[Offering] = Relationship(back_populates="beer")
+    ratings: list[UserRating] = Relationship(back_populates="beer")
+    tags: list[BeerTag] = Relationship(back_populates="beer")
 
     @property
     def tag_names(self) -> set[str]:
@@ -45,9 +52,13 @@ class Brewery(SQLModel, table=True):
     image_url: str
     name: str
     country: str
+    city: str | None = None
+    state: str | None = None
 
     def __str__(self) -> str:
-        return f"{self.name} ({self.country})"
+        location_parts = [self.city, self.state, self.country]
+        location = ", ".join(p for p in location_parts if p)
+        return f"{self.name} ({location})"
 
     def __repr__(self) -> str:
         return f"Brewery({self!s})"
@@ -60,7 +71,7 @@ class BeerTag(SQLModel, table=True):
     beer: Beer = Relationship(back_populates="tags")
 
     tag_id: int = Field(foreign_key="flavor_tags.tag_id", primary_key=True, index=True)
-    tag: "FlavorTag" = Relationship(back_populates="beers")
+    tag: FlavorTag = Relationship(back_populates="beers")
 
     count: int
 
@@ -90,7 +101,7 @@ class Shop(SQLModel, table=True):
     shipping_fee: int
     free_shipping_over: int | None = None
 
-    offerings: list["Offering"] = Relationship(back_populates="shop")
+    offerings: list[Offering] = Relationship(back_populates="shop")
 
     def __str__(self) -> str:
         return f"{self.name} ({self.url}, {self.shipping_fee})"
@@ -135,7 +146,7 @@ class User(SQLModel, table=True):
     avatar_url: str
     access_token: str
 
-    ratings: list["UserRating"] = Relationship(back_populates="user")
+    ratings: list[UserRating] = Relationship(back_populates="user")
 
     @hybrid_property
     def is_app(self) -> bool:

@@ -112,15 +112,26 @@ class UntappdAPI:
         except KeyError:
             tags = None
 
+        brewery_info = beer.get("brewery", {})
+        location_info = brewery_info.get("location", {})
+        stats_info = beer.get("stats", {})
+
         return UntappdBeerResult(
             beer_id=beer["bid"],
             image_url=beer.get("beer_label_hd", beer["beer_label"]),
             name=beer["beer_name"],
-            brewery=beer["brewery"]["brewery_name"],
+            brewery=brewery_info.get("brewery_name", ""),
+            brewery_id=brewery_info.get("brewery_id"),
+            brewery_country=brewery_info.get("country_name"),
+            brewery_city=location_info.get("brewery_city"),
+            brewery_state=location_info.get("brewery_state"),
             style=beer["beer_style"],
             abv=beer["beer_abv"],
             ibu=beer["beer_ibu"],
             rating=beer["rating_score"],
+            weighted_rating=beer.get("weighted_rating_score"),
+            rating_count=beer.get("rating_count"),
+            total_user_count=stats_info.get("total_user_count"),
             description=beer["beer_description"],
             tags=tags,
         )

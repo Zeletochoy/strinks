@@ -101,6 +101,13 @@ class BeerDB:
         rating: float,
         description: str | None = None,
         tags: Sequence[tuple[FlavorTag, int]] | None = None,
+        brewery_id: int | None = None,
+        brewery_country: str | None = None,
+        brewery_city: str | None = None,
+        brewery_state: str | None = None,
+        weighted_rating: float | None = None,
+        rating_count: int | None = None,
+        total_user_count: int | None = None,
         check_existence: bool = True,
     ) -> Beer:
         beer = None
@@ -111,10 +118,14 @@ class BeerDB:
                 beer.image_url = image_url
                 beer.name = name
                 beer.brewery = brewery
+                beer.brewery_id = brewery_id
                 beer.style = style
                 beer.abv = abv
                 beer.ibu = ibu
                 beer.rating = rating
+                beer.weighted_rating = weighted_rating
+                beer.rating_count = rating_count
+                beer.total_user_count = total_user_count
                 beer.updated_at = now_jst()
                 beer.description = description
         if beer is None:
@@ -123,10 +134,14 @@ class BeerDB:
                 image_url=image_url,
                 name=name,
                 brewery=brewery,
+                brewery_id=brewery_id,
                 style=style,
                 abv=abv,
                 ibu=ibu,
                 rating=rating,
+                weighted_rating=weighted_rating,
+                rating_count=rating_count,
+                total_user_count=total_user_count,
                 updated_at=now_jst(),
                 description=description,
             )
@@ -134,6 +149,19 @@ class BeerDB:
         if tags is not None:
             for flavor_tag, count in tags:
                 beer.tags.append(BeerTag(beer_id=beer_id, tag_id=flavor_tag.tag_id, count=count))
+
+        # Insert or update brewery if we have the info
+        if brewery_id and brewery_country:
+            self.insert_brewery(
+                brewery_id=brewery_id,
+                image_url="",  # We don't have brewery image from beer response
+                name=brewery,
+                country=brewery_country,
+                city=brewery_city,
+                state=brewery_state,
+                check_existence=True,
+            )
+
         return beer
 
     def get_beer(self, beer_id: int) -> Beer | None:
@@ -295,6 +323,8 @@ class BeerDB:
         image_url: str,
         name: str,
         country: str,
+        city: str | None = None,
+        state: str | None = None,
         check_existence: bool = True,
     ) -> Brewery:
         if check_existence:
@@ -304,12 +334,16 @@ class BeerDB:
                 brewery.image_url = image_url
                 brewery.name = name
                 brewery.country = country
+                brewery.city = city
+                brewery.state = state
                 return brewery
         brewery = Brewery(
             brewery_id=brewery_id,
             image_url=image_url,
             name=name,
             country=country,
+            city=city,
+            state=state,
         )
         self.session.add(brewery)
         return brewery
