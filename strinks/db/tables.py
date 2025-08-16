@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 from datetime import datetime
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 from sqlalchemy import Column, DateTime
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -29,10 +27,10 @@ class Beer(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     description: str | None = None
 
-    brewery_rel: Brewery | None = Relationship()
-    offerings: list[Offering] = Relationship(back_populates="beer")
-    ratings: list[UserRating] = Relationship(back_populates="beer")
-    tags: list[BeerTag] = Relationship(back_populates="beer")
+    brewery_rel: Optional["Brewery"] = Relationship()
+    offerings: list["Offering"] = Relationship(back_populates="beer")
+    ratings: list["UserRating"] = Relationship(back_populates="beer")
+    tags: list["BeerTag"] = Relationship(back_populates="beer")
 
     @property
     def tag_names(self) -> set[str]:
@@ -71,7 +69,7 @@ class BeerTag(SQLModel, table=True):
     beer: Beer = Relationship(back_populates="tags")
 
     tag_id: int = Field(foreign_key="flavor_tags.tag_id", primary_key=True, index=True)
-    tag: FlavorTag = Relationship(back_populates="beers")
+    tag: "FlavorTag" = Relationship(back_populates="beers")
 
     count: int
 
@@ -101,7 +99,7 @@ class Shop(SQLModel, table=True):
     shipping_fee: int
     free_shipping_over: int | None = None
 
-    offerings: list[Offering] = Relationship(back_populates="shop")
+    offerings: list["Offering"] = Relationship(back_populates="shop")
 
     def __str__(self) -> str:
         return f"{self.name} ({self.url}, {self.shipping_fee})"
@@ -146,7 +144,7 @@ class User(SQLModel, table=True):
     avatar_url: str
     access_token: str
 
-    ratings: list[UserRating] = Relationship(back_populates="user")
+    ratings: list["UserRating"] = Relationship(back_populates="user")
 
     @hybrid_property
     def is_app(self) -> bool:
