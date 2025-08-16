@@ -6,36 +6,59 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Strinks is a beer cost-performance monitoring system that scrapes beer prices from various online shops in Japan, matches them with Untappd data, and provides a web interface to find the best value beers.
 
+## Recent Major Changes (2025-08-16)
+
+### Migration to Modern Stack
+
+- **SQLAlchemy → SQLModel**: Full migration for better Pydantic integration
+- **setup.py → pyproject.toml**: Using `uv` package manager for faster dependency management
+- **Type Safety**: Achieved zero mypy errors (from 246 errors!)
+- **Pre-commit Hooks**: Automated code quality with ruff, black, mypy, pyupgrade
+- **Timezone-aware Datetimes**: All datetime fields now properly handle JST timezone
+- **Test Suite**: Added comprehensive tests for models, shops, and utilities
+
 ## Key Commands
 
 ### Development
 
 ```bash
+# Install dependencies with uv (fast!)
+uv sync
+
+# Run any command with uv
+uv run <command>
+
 # Install the package in development mode
-pip install -e .
+uv pip install -e .
 
-# Format code (automatic git hook available)
-isort -l 120 --lai 2 strinks tests setup.py
-black --config pyproject.toml strinks tests setup.py
+# Pre-commit hooks (runs automatically on commit)
+uv run pre-commit run --all-files
 
-# Enable automatic formatting on commit
-git config --local core.hooksPath .githooks/
+# Run specific pre-commit hook
+uv run pre-commit run mypy --all-files
+uv run pre-commit run ruff --all-files
+
+# Auto-fix issues with pre-commit
+uv run pre-commit run --all-files --hook-stage manual
 ```
 
 ### Testing & Linting
 
 ```bash
-# Run all tests with tox (includes pytest, flake8, mypy)
-tox
+# Run all tests
+uv run pytest tests/
 
-# Run tests only
-pytest tests/
+# Run tests excluding integration tests
+uv run pytest tests/ -k "not integration"
 
-# Run linting
-flake8 --config=tox.ini strinks/ tests/ setup.py
+# Run specific test file
+uv run pytest tests/test_models.py -v
 
-# Type checking
-mypy --config-file=mypy.ini strinks/ tests/ setup.py
+# Run with coverage
+uv run pytest --cov=strinks tests/
+
+# Type checking (should show 0 errors!)
+uv run pre-commit run mypy --all-files
 ```
 
 ### CLI Tools
@@ -103,3 +126,39 @@ Required for full functionality:
 - `strinks/db.sqlite` - Main SQLite database
 - `strinks/api/translation.py` - Japanese brewery name translations
 - `strinks/api/shops/__init__.py` - Base shop scraper interface
+
+## Implementation Notes
+
+### SQLModel vs SQLAlchemy
+
+- Now using SQLModel throughout for better Pydantic integration
+- All queries use modern SQLModel API: `select()`, `where()`, `col()`
+- No more legacy `query()` calls
+- Models in `strinks/db/tables.py` use SQLModel with proper type hints
+
+### Type Safety
+
+- Achieved zero mypy errors - maintain this!
+- Avoid type ignores - think through proper solutions
+- BeautifulSoup operations need `isinstance(item, Tag)` checks
+- Use `Callable[[], Shop]` for shop factory functions
+
+### Datetime Handling
+
+- All datetime fields are timezone-aware (JST)
+- Database might return naive datetimes - code handles both
+- Always use `now_jst()` from `strinks.api.utils` for current time
+- `updated_at` fields use `Column(DateTime(timezone=True))`
+
+### Testing
+
+- Tests use isolated temporary databases (not in-memory due to SQLModel)
+- Fixtures properly scoped to avoid conflicts
+- Integration tests marked with `@pytest.mark.integration`
+
+### Shop Scrapers
+
+- `ShopBeer` now uses Pydantic BaseModel (not attrs)
+- Validation via `model_validator` to raise `NotABeerError`
+- Shop map returns `Callable[[], Shop]` to handle both classes and partials
+- CBM locations created dynamically with `partial(CBM, location=loc)`
