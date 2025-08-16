@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, model_validator
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..translation import BREWERY_JP_EN, deepl_translate, has_japanese, to_romaji
+from .discovery import get_shop_map_dynamic
 
 
 class ShopBeer(BaseModel):
@@ -88,49 +89,11 @@ class Shop(ABC):
 
 
 def get_shop_map() -> dict[str, Callable[[], Shop]]:
-    # TODO: autodiscovery
-    from .antenna import AntennaAmerica
-    from .beerzilla import Beerzilla
-    from .cbm import CBM
-    from .chouseiya import Chouseiya
-    from .craftbeers import CraftBeers
-    from .digtheline import DigTheLine
-    from .gbf import GoodBeerFaucets
-    from .goodbeer import Goodbeer
-    from .hopbuds import HopBuds
-    from .ibrew import IBrew
-    from .ichigo import IchiGoIchiAle
-    from .maruho import Maruho
-    from .ohtsuki import Ohtsuki
-    from .slopshop import SlopShop
-    from .threefeet import Threefeet
-    from .volta import Volta
+    """Get the map of shop names to shop factory functions.
 
-    shop_map: dict[str, Callable[[], Shop]] = {
-        cls.short_name: cls
-        for cls in (
-            AntennaAmerica,
-            Beerzilla,
-            Chouseiya,
-            CraftBeers,
-            DigTheLine,
-            GoodBeerFaucets,
-            Goodbeer,
-            HopBuds,
-            IBrew,
-            IchiGoIchiAle,
-            Maruho,
-            Ohtsuki,
-            SlopShop,
-            Threefeet,
-            Volta,
-        )
-    }
-
-    # TODO: standardize this to integrate in autodiscovery
-    shop_map |= {f"cbm-{location.lstrip('cbm-')}": partial(CBM, location=location) for location in CBM.get_locations()}
-
-    return shop_map
+    Uses dynamic discovery to find all Shop subclasses automatically.
+    """
+    return get_shop_map_dynamic()
 
 
 class NotABeerError(Exception): ...

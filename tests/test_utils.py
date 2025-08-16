@@ -1,8 +1,10 @@
 """Tests for utility functions."""
 
+import time
 from datetime import datetime
 from unittest.mock import Mock, patch
 
+from strinks.api.translation import deepl_translate, get_deepl_cache
 from strinks.api.utils import JST, RateLimitedSession, get_retrying_session, now_jst
 
 
@@ -108,25 +110,25 @@ class TestTranslation:
 
     @patch("strinks.api.translation.session.get")
     def test_deepl_translate_caching(self, mock_get):
-        """Test that DeepL translations are cached."""
-        from strinks.api.translation import DEEPL_CACHE, deepl_translate
-
+        """Test that deepl_translate uses cache properly."""
         # Mock DeepL API response
         mock_response = Mock()
         mock_response.json.return_value = {"translations": [{"text": "Test Beer"}]}
         mock_get.return_value = mock_response
 
-        # Clear cache for test
-        test_text = "テストビール_unique_test"
-        if test_text in DEEPL_CACHE:
-            del DEEPL_CACHE[test_text]
+        # Use unique test text to avoid cache collisions
+        test_text = "テストビール_test_" + str(time.time())
 
         # First call should hit API
         result1 = deepl_translate(test_text)
         assert mock_get.call_count == 1
         assert result1 == "Test Beer"
 
-        # Second call should use cache
+        # Second call should use cache (no additional API call)
         result2 = deepl_translate(test_text)
-        assert mock_get.call_count == 1  # No additional API call
+        assert mock_get.call_count == 1  # Still 1, not 2
         assert result2 == "Test Beer"
+
+        # Verify it's actually in the cache
+        cache = get_deepl_cache()
+        assert cache.get(test_text) == "Test Beer"
