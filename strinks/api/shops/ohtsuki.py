@@ -1,4 +1,3 @@
-import re
 from collections.abc import Iterator
 
 from bs4 import BeautifulSoup
@@ -7,6 +6,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import Shop, ShopBeer
+from .parsing import clean_beer_name, parse_milliliters, parse_price
 
 session = get_retrying_session()
 
@@ -30,9 +30,15 @@ class Ohtsuki(Shop):
                     url = base_url + name_cell.find("a")["href"]
                     image_url = base_url.replace(".html", ".jpg")
                     raw_name = name_cell.get_text("\n").lower().split("\n", 1)[0]
-                    raw_name = re.sub("( ?(大瓶|初期|Magnum|Jeroboam|alc[.].*))*$", "", raw_name)
-                    ml = int(ml_cell.get_text().strip().replace("ml", ""))
-                    price = int(price_cell.get_text().strip().replace("円", "").replace(",", ""))
+                    # Use parsing utility for cleaning
+                    raw_name = clean_beer_name(raw_name)
+                    # Use parsing utilities
+                    ml = parse_milliliters(ml_cell.get_text().strip())
+                    if ml is None:
+                        continue
+                    price = parse_price(price_cell.get_text().strip())
+                    if price is None:
+                        continue
                     yield ShopBeer(
                         raw_name=raw_name,
                         url=url,

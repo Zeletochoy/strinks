@@ -7,8 +7,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-
-DIGITS = set("0123456789")
+from .parsing import parse_milliliters, parse_price
 
 session = get_retrying_session()
 
@@ -47,24 +46,25 @@ class IchiGoIchiAle(Shop):
         price_match = re.search(r"税込([0-9,]+)円", price_text)
         if price_match is None:
             raise NotABeerError
-        price = int(price_match.group(1).replace(",", ""))
+        # Use parsing utility for price
+        price = parse_price(price_match.group(1))
+        if price is None:
+            raise NotABeerError
+
         desc = page_soup.find("div", class_="product_explain").get_text()
-        ml_match = re.search(r"容量:(\d+)ml", desc.lower())
-        if ml_match is None:
+        # Use parsing utility for milliliters
+        ml = parse_milliliters(desc)
+        if ml is None:
             raise NotABeerError
-        ml = int(ml_match.group(1))
         image_url = page_soup.find("img", class_="product_img_main_img")["src"]
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+        return ShopBeer(
+            raw_name=raw_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

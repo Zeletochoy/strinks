@@ -6,6 +6,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .parsing import parse_milliliters, parse_price
 
 session = get_retrying_session()
 
@@ -36,22 +37,30 @@ class CraftBeers(Shop):
             if not image_url.startswith("https://"):
                 image_url = "https://www.craftbeers.jp" + image_url
             table = page_soup.find("table", class_="detail-list")
-            ml_text = next(text for row in table("td") if (text := row.get_text().strip().lower()).endswith("ml"))
-            ml = int(ml_text.replace("ml", ""))
-            price = int(page_soup.find("span", {"data-id": "makeshop-item-price:1"}).get_text().replace(",", ""))
+            # Find the ml text from table
+            ml_text = next(
+                (row.get_text().strip() for row in table("td") if row.get_text().strip().lower().endswith("ml")), None
+            )
+            if ml_text is None:
+                raise NotABeerError
+            ml = parse_milliliters(ml_text)
+            if ml is None:
+                raise NotABeerError
+            # Use parsing utility for price
+            price_text = page_soup.find("span", {"data-id": "makeshop-item-price:1"}).get_text()
+            price = parse_price(price_text)
+            if price is None:
+                raise NotABeerError
         except (AttributeError, StopIteration):
             raise NotABeerError
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+        return ShopBeer(
+            raw_name=raw_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

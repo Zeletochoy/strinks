@@ -1,4 +1,3 @@
-import re
 from collections.abc import Iterator
 
 from bs4 import BeautifulSoup
@@ -7,6 +6,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .parsing import extract_brewery_beer, parse_milliliters, parse_price
 
 session = get_retrying_session()
 
@@ -37,28 +37,42 @@ class HopBuds(Shop):
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
         title = page_soup.find("h1", class_="product-single__title").get_text().strip()
-        brewery_name, beer_name = title.lower().split(" - ")
+
+        # Extract brewery and beer name
+        brewery_name, beer_name = extract_brewery_beer(title)
+        if not brewery_name or not beer_name:
+            # Fallback to original logic if extract_brewery_beer doesn't work
+            brewery_name, beer_name = title.lower().split(" - ")
+        else:
+            brewery_name = brewery_name.lower()
+            beer_name = beer_name.lower()
+
         raw_name = f"{brewery_name} {beer_name}"
-        price = int(page_soup.find(id="ProductPrice").get_text().strip()[1:].replace(",", ""))
+
+        # Parse price
+        price_text = page_soup.find(id="ProductPrice").get_text().strip()
+        price = parse_price(price_text)
+        if price is None:
+            raise NotABeerError
+
+        # Parse milliliters
         desc = page_soup.find("div", class_="rte").get_text().strip()
-        ml_match = re.search(r"(\d{3,4})ml", desc)
-        if ml_match is None:
+        ml = parse_milliliters(desc)
+        if ml is None:
             raise NotABeerError
-        ml = int(ml_match.group(1))
+
         image_url = "https:" + page_soup.find(id="ProductPhotoImg")["src"]
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                brewery_name=brewery_name,
-                beer_name=beer_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+
+        return ShopBeer(
+            raw_name=raw_name,
+            brewery_name=brewery_name,
+            beer_name=beer_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

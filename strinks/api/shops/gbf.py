@@ -1,4 +1,3 @@
-import re
 from collections.abc import Iterator
 
 from bs4 import BeautifulSoup
@@ -7,20 +6,9 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NotABeerError, Shop, ShopBeer
-
-DIGITS = set("0123456789")
+from .parsing import keep_until_japanese, parse_milliliters, parse_price
 
 session = get_retrying_session()
-
-
-def keep_until_japanese(text: str) -> str:
-    chars = []
-    for c in text:
-        if ord(c) < 0x3000:  # first japanese characters
-            chars.append(c)
-        else:
-            break
-    return "".join(chars)
 
 
 class GoodBeerFaucets(Shop):
@@ -57,6 +45,7 @@ class GoodBeerFaucets(Shop):
         title = page_soup.find("h2", class_="ttl_h2").get_text()
         raw_name = keep_until_japanese(title).strip()
         table = page_soup.find("table", class_="product_spec_table")
+        price = None
         for row in table("tr"):
             try:
                 row_name = row.find("th").get_text().strip()
@@ -64,27 +53,26 @@ class GoodBeerFaucets(Shop):
             except AttributeError:
                 continue
             if row_name == "販売価格":
-                try:
-                    price = int("".join(c for c in row_value if c in DIGITS))
-                except ValueError:
+                # Use parsing utility for price
+                price = parse_price(row_value)
+                if price is None:
                     raise NotABeerError
+        if price is None:
+            raise NotABeerError
         desc = page_soup.find("div", class_="product_exp").get_text().strip().split("\n", 1)[0]
-        ml_match = re.search(r"([0-9]+)ml", desc.lower())
-        if ml_match is None:
+        # Use parsing utility for milliliters
+        ml = parse_milliliters(desc)
+        if ml is None:
             raise NotABeerError
-        ml = int(ml_match.group(1))
         image_url = page_soup.find("div", class_="product_image_main").find("img")["src"]
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+        return ShopBeer(
+            raw_name=raw_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

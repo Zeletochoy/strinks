@@ -1,10 +1,10 @@
-import re
 from collections.abc import Iterator
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .parsing import parse_milliliters
 
 session = get_retrying_session()
 
@@ -36,20 +36,20 @@ class Threefeet(Shop):
         image_url = page_json["images"]["data"][0]["absolute_url"]
         url = "https://3feet.bansha9.com" + page_json["site_link"]
         desc = page_json["seo_page_description"]
-        match = re.search(r"([0-9]+)ml", desc.lower())
-        if match is not None:
-            ml = int(match.group(1))
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
+
+        # Use parsing utility for milliliters
+        ml = parse_milliliters(desc)
+        if ml is None:
             raise NotABeerError
+
+        return ShopBeer(
+            raw_name=raw_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

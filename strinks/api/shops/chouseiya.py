@@ -7,6 +7,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .parsing import parse_milliliters, parse_price
 
 session = get_retrying_session()
 
@@ -43,34 +44,32 @@ class Chouseiya(Shop):
             raise NotABeerError
         beer_name = title_match.group(1)
         brewery_name = title_match.group(2)
-        price_str = info.find("tr", id="M_usualValue").get_text().strip().lower()
-        price_match = re.search(r"([0-9,]+)円", price_str)
-        if price_match is None:
+        price_str = info.find("tr", id="M_usualValue").get_text().strip()
+        # Use parsing utility for price
+        price = parse_price(price_str)
+        if price is None:
             raise NotABeerError
-        price = int(price_match.group(1).replace(",", ""))
-        desc = page_soup.find("div", class_="detailTxt").get_text().strip().lower()
-        ml_match = re.search(r"/([0-9]+)ml", desc)
-        if ml_match is None:
+
+        desc = page_soup.find("div", class_="detailTxt").get_text().strip()
+        # Use parsing utility for milliliters
+        ml = parse_milliliters(desc)
+        if ml is None:
             raise NotABeerError
-        ml = int(ml_match.group(1))
         image_href = page_soup.find("div", id="itemImg").find("a")["href"]
         image_match = re.search(r"imageview\('(.*)'\)", image_href)
         if image_match is None:
             raise NotABeerError
         image_url = "https://makeshop-multi-images.akamaized.net/chouseiya/itemimages/" + image_match.group(1)
-        try:
-            return ShopBeer(
-                raw_name=f"{brewery_name} {beer_name}",
-                url=url,
-                brewery_name=brewery_name,
-                beer_name=beer_name,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+        return ShopBeer(
+            raw_name=f"{brewery_name} {beer_name}",
+            url=url,
+            brewery_name=brewery_name,
+            beer_name=beer_name,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

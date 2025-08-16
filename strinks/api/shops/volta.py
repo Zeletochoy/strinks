@@ -7,6 +7,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .parsing import clean_beer_name, extract_brewery_beer, parse_milliliters
 
 session = get_retrying_session()
 
@@ -45,30 +46,36 @@ class Volta(Shop):
         title = page_soup.find("h2", class_="c-product-name").get_text().strip()
         title = re.sub(r"\s.\d\d?/\d\d?入荷予定.", "", title)
         title = re.sub(r"\s*\[[^]]+\]\s*", "", title)
+
+        # Try to extract brewery/beer from title
         if "　" in title:
             raw_name = title.rsplit("　", 1)[-1]
         elif "/" in title:
-            raw_name = title.rsplit("/", 1)[-1]
+            brewery, beer = extract_brewery_beer(title)
+            raw_name = beer if beer else title
         else:
             raw_name = title
-        raw_name = raw_name.replace("\t", " ").replace("  ", " ").lower()
+
+        # Clean the name
+        raw_name = clean_beer_name(raw_name.lower())
+
         price = int(page_soup.find("meta", property="product:price:amount")["content"])
         image_url = page_soup.find("meta", property="og:image")["content"]
         desc = page_soup.find("div", class_="c-message").get_text()
-        for line in desc.split("\n"):
-            if (match := re.search(r"【ML】[^0-9]*(\d+)", line)) is not None:
-                ml = int(match.group(1))
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
+
+        # Parse milliliters from description
+        ml = parse_milliliters(desc)
+        if ml is None:
             raise NotABeerError
+
+        return ShopBeer(
+            raw_name=raw_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

@@ -1,4 +1,3 @@
-import re
 from collections.abc import Iterator
 from urllib.parse import urlparse, urlunparse
 
@@ -8,7 +7,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-from .utils import keep_until_japanese
+from .parsing import keep_until_japanese, parse_milliliters
 
 session = get_retrying_session()
 
@@ -52,20 +51,20 @@ class Beerzilla(Shop):
         image_url = page_json["thumbnail_url"]
         url = page_json["url"]
         desc = page_json["description"]
-        match = re.search(r"([0-9０-９]+)(ml|ｍｌ)", desc.lower())
-        if match is not None:
-            ml = int(match.group(1))
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
+
+        # Use parsing utility for milliliters
+        ml = parse_milliliters(desc)
+        if ml is None:
             raise NotABeerError
+
+        return ShopBeer(
+            raw_name=raw_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

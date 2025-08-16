@@ -8,6 +8,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .parsing import normalize_numbers, parse_milliliters
 
 session = get_retrying_session()
 
@@ -42,28 +43,31 @@ class SlopShop(Shop):
 
     def _parse_beer_page(self, page_json: dict) -> ShopBeer:
         title = page_json["title"].lower()
-        raw_name = re.split(r"(bottle|can)\s+[0-9０-９]+(ml|ｍｌ)", title)[0].strip()
+        # Normalize full-width numbers before processing
+        title_normalized = normalize_numbers(title)
+        raw_name = re.split(r"(bottle|can)\s+[0-9]+(ml|ｍｌ)", title_normalized)[0].strip()
         price = int(page_json["offers"][0]["price"])
         image_url = "https:" + page_json["thumbnail_url"]
         url = page_json["url"]
-        match = re.search(r"([0-9０-９]+)(ml|ｍｌ)", title)
-        if match is not None:
-            ml = int(match.group(1))
+
+        # Use parsing utility for milliliters
+        ml = parse_milliliters(title)
+        if ml is None:
+            raise NotABeerError
+
         brewery_name = page_json["brand"].lower().strip()
         beer_name = raw_name[len(brewery_name) + 1 :]
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                brewery_name=brewery_name,
-                beer_name=beer_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+
+        return ShopBeer(
+            raw_name=raw_name,
+            brewery_name=brewery_name,
+            beer_name=beer_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

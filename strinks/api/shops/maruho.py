@@ -8,6 +8,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .parsing import parse_milliliters
 
 session = get_retrying_session()
 
@@ -43,29 +44,30 @@ class Maruho(Shop):
 
     def _parse_beer_page(self, page_json) -> ShopBeer:
         title = page_json["title"].strip().lower()
-        title_match = re.search(r"^([^ ]+) *([0-9]{3,4})ml */ *(.*)$", title)
+        # Extract milliliters using parsing utility
+        ml = parse_milliliters(title)
+        if ml is None:
+            raise NotABeerError
+        # Now extract brewery and beer name with the known ml position
+        title_match = re.search(r"^([^ ]+) *\d+ml */ *(.*)$", title)
         if title_match is None:
             raise NotABeerError
         beer_name = title_match.group(1)
-        ml = int(title_match.group(2))
-        brewery_name = title_match.group(3)
+        brewery_name = title_match.group(2)
         raw_name = f"{brewery_name} {beer_name}"
         price = int(page_json["offers"][0]["price"])
         image_url = "https:" + page_json["thumbnail_url"]
         url = page_json["url"]
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                brewery_name=brewery_name,
-                beer_name=beer_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+        return ShopBeer(
+            raw_name=raw_name,
+            brewery_name=brewery_name,
+            beer_name=beer_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

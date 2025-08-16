@@ -1,4 +1,3 @@
-import re
 from collections.abc import Iterator
 from urllib.parse import urlparse, urlunparse
 
@@ -8,8 +7,12 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
-
-DIGITS = set("0123456789")
+from .parsing import (
+    clean_beer_name,
+    extract_brewery_from_description,
+    is_beer_set,
+    parse_milliliters,
+)
 
 session = get_retrying_session()
 
@@ -43,36 +46,40 @@ class AntennaAmerica(Shop):
             raise NoBeersError
 
     def _parse_beer_page(self, page_json: dict) -> ShopBeer:
-        raw_name = re.split(r"\([0-9０-９]+(ml|ｍｌ)\)", page_json["title"].lower())[0].strip()
-        raw_name = re.sub("【[^】]*】", "", raw_name)
-        if "本セット" in raw_name:
+        # Clean the title
+        raw_name = clean_beer_name(page_json["title"].lower())
+
+        # Check if it's a beer set
+        if is_beer_set(raw_name):
             raise NotABeerError
+
         price = int(page_json["offers"][0]["price"])
         image_url = "https:" + page_json["thumbnail_url"]
         url = page_json["url"]
         desc = page_json["description"]
-        match = re.search(r"([0-9０-９]+)(ml|ｍｌ)", desc.lower())
-        if match is not None:
-            ml = int(match.group(1))
-        match = re.search(r"ブリュワリー：([^<]+)<", desc.lower())
-        if match is not None:
-            brewery_name = match.group(1)
-            beer_name = raw_name[len(brewery_name) + 1 :]
+
+        # Parse milliliters from description
+        ml = parse_milliliters(desc)
+        if ml is None:
+            raise NotABeerError
+
+        # Extract brewery from description
+        brewery_name = extract_brewery_from_description(desc)
+        if brewery_name:
+            beer_name = raw_name[len(brewery_name) + 1 :] if raw_name.startswith(brewery_name) else raw_name
         else:
             brewery_name = beer_name = None
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                brewery_name=brewery_name,
-                beer_name=beer_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
-            raise NotABeerError
+
+        return ShopBeer(
+            raw_name=raw_name,
+            brewery_name=brewery_name,
+            beer_name=beer_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():

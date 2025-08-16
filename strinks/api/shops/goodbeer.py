@@ -1,4 +1,3 @@
-import re
 from collections.abc import Iterator
 
 from bs4 import BeautifulSoup
@@ -7,6 +6,7 @@ from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
 from ..utils import get_retrying_session
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
+from .parsing import clean_beer_name, parse_milliliters, parse_price
 
 session = get_retrying_session()
 
@@ -47,7 +47,8 @@ class Goodbeer(Shop):
                 break
         else:
             raise NotABeerError
-        title = re.sub(r"【[^】]*】", "", title).replace("限定醸造", "")
+        # Use parsing utility for cleaning
+        title = clean_beer_name(title)
         name_parts = title.split(jp_brewery, 1)
         if name_parts[0]:  # Has english name
             raw_name = name_parts[0]
@@ -57,6 +58,7 @@ class Goodbeer(Shop):
             brewery_name, beer_name = name_parts
         raw_name = raw_name.strip().lower()
         table = detail.find(id="item-table")
+        ml = None
         for row in table("dl"):
             try:
                 row_name = row.find("dt").get_text().strip()
@@ -64,24 +66,27 @@ class Goodbeer(Shop):
             except AttributeError:
                 continue
             if row_name == "容量":
-                try:
-                    ml = int(row_value.lower().replace("ml", ""))
-                except ValueError:
+                # Use parsing utility for milliliters
+                ml = parse_milliliters(row_value)
+                if ml is None:
                     raise NotABeerError
-        price = int(detail.find("span", class_="price_tax_value").get_text().replace(",", ""))
-        try:
-            return ShopBeer(
-                raw_name=raw_name,
-                brewery_name=brewery_name,
-                beer_name=beer_name,
-                url=url,
-                milliliters=ml,
-                price=price,
-                quantity=1,
-                image_url=image_url,
-            )
-        except UnboundLocalError:
+        if ml is None:
             raise NotABeerError
+        # Use parsing utility for price
+        price_text = detail.find("span", class_="price_tax_value").get_text()
+        price = parse_price(price_text)
+        if price is None:
+            raise NotABeerError
+        return ShopBeer(
+            raw_name=raw_name,
+            brewery_name=brewery_name,
+            beer_name=beer_name,
+            url=url,
+            milliliters=ml,
+            price=price,
+            quantity=1,
+            image_url=image_url,
+        )
 
     def iter_beers(self) -> Iterator[ShopBeer]:
         for listing_page in self._iter_pages():
