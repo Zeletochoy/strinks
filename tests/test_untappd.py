@@ -1,42 +1,84 @@
 """Tests for Untappd API and caching."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import Mock, patch
 
 import pytest
 
 from strinks.api.shops import ShopBeer
-from strinks.api.untappd import UntappdCacheEntry, UntappdClient
+from strinks.api.untappd import UntappdClient
 from strinks.api.untappd.api import UntappdAPI
+from strinks.api.untappd.cache import CacheStatus, UntappdSQLiteCache
 from strinks.api.untappd.structs import RateLimitError, UntappdBeerResult
 from strinks.api.untappd.web import UntappdWeb
-from strinks.api.utils import JST, now_jst
+from strinks.api.utils import now_jst
+from strinks.db.tables import UntappdCache
 
 
-class TestUntappdCache:
-    def test_cache_entry_creation(self):
-        """Test creating cache entries."""
-        entry = UntappdCacheEntry(beer_id=12345, timestamp=int(now_jst().timestamp()))
-        assert entry.beer_id == 12345
-        assert entry.timestamp > 0
+class TestUntappdSQLiteCache:
+    @pytest.fixture(scope="function")
+    def in_memory_db(self):
+        """Create an in-memory SQLite database for testing."""
+        import tempfile
 
-    def test_cache_validity(self):
-        """Test cache entry validity checking."""
+        from strinks.db.models import BeerDB
+
+        with tempfile.NamedTemporaryFile(suffix=".db") as tmp:
+            db = BeerDB(tmp.name, read_only=False)
+            yield db
+            db.session.close()
+
+    @pytest.fixture
+    def cache(self, in_memory_db):
+        """Create a cache instance with test database."""
         from strinks.api.untappd import BEER_CACHE_TIME
 
-        # Create a recent entry
-        recent_entry = UntappdCacheEntry(beer_id=111, timestamp=int(now_jst().timestamp()))
+        return UntappdSQLiteCache(in_memory_db, cache_duration=BEER_CACHE_TIME)
 
-        # Create an old entry
-        old_time = now_jst() - BEER_CACHE_TIME - timedelta(hours=1)
-        old_entry = UntappdCacheEntry(beer_id=222, timestamp=int(old_time.timestamp()))
+    def test_cache_miss(self, cache):
+        """Test cache miss for non-existent query."""
+        beer_id, status = cache.get("nonexistent_query")
+        assert beer_id is None
+        assert status == CacheStatus.MISS
 
-        # Check validity
-        recent_valid = now_jst() - datetime.fromtimestamp(recent_entry.timestamp, tz=JST) < BEER_CACHE_TIME
-        old_valid = now_jst() - datetime.fromtimestamp(old_entry.timestamp, tz=JST) < BEER_CACHE_TIME
+    def test_cache_hit(self, cache):
+        """Test cache hit for existing query."""
+        # Add entry to cache
+        cache.set("test_query", 12345)
 
-        assert recent_valid is True
-        assert old_valid is False
+        # Retrieve from cache
+        beer_id, status = cache.get("test_query")
+        assert beer_id == 12345
+        assert status == CacheStatus.HIT
+
+    def test_cache_not_found(self, cache):
+        """Test caching a not-found result."""
+        # Cache a None result (beer not found)
+        cache.set("not_found_query", None)
+
+        # Retrieve from cache
+        beer_id, status = cache.get("not_found_query")
+        assert beer_id is None
+        assert status == CacheStatus.HIT
+
+    def test_cache_expired(self, cache, in_memory_db):
+        """Test expired cache entry."""
+        from strinks.api.untappd import BEER_CACHE_TIME
+
+        # Add entry with past expiry
+        now = now_jst()
+        expired_time = now - BEER_CACHE_TIME - timedelta(hours=1)
+
+        entry = UntappdCache(
+            query="expired_query", beer_id=999, created_at=expired_time, expires_at=expired_time + BEER_CACHE_TIME
+        )
+        in_memory_db.session.add(entry)
+        in_memory_db.session.commit()
+
+        # Check it returns EXPIRED
+        beer_id, status = cache.get("expired_query")
+        assert beer_id is None
+        assert status == CacheStatus.EXPIRED
 
 
 class TestUntappdAPI:
@@ -169,6 +211,11 @@ class TestUntappdIntegration:
     def test_try_find_beer_with_shop_beer(self, mock_backends):
         """Test finding beer with ShopBeer input."""
         untappd = UntappdClient()
+
+        # Mock the cache to return MISS (not cached)
+        mock_cache = Mock()
+        mock_cache.get.return_value = (None, CacheStatus.MISS)
+        untappd.cache = mock_cache
 
         # Mock the current backend
         mock_backend = Mock()

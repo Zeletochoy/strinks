@@ -1,48 +1,31 @@
-import atexit
-import json
 import time
 from collections.abc import Iterator, Sequence
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import NamedTuple
 
 from ...db import get_db
 from ..shops import ShopBeer
-from ..utils import JST, now_jst
+from ..utils import now_jst
 from .api import UntappdAPI
 from .auth import UNTAPPD_OAUTH_URL, UserInfo, untappd_get_oauth_token, untappd_get_user_info
+from .cache import CacheStatus, UntappdSQLiteCache
 from .structs import RateLimitError, UntappdBeerResult, UserRating
 from .web import UntappdWeb
 
-CACHE_PATH = Path(__file__).with_name("untappd_cache.json")
 MIN_SECS_BETWEEN_RESTARTS = 300  # 5min
 BEER_CACHE_TIME = timedelta(days=30)
 
 
-class UntappdCacheEntry(NamedTuple):
-    beer_id: int | None
-    timestamp: int
-
-
 class UntappdClient:
     def __init__(self, *backends: UntappdAPI | UntappdWeb):
-        try:
-            with open(CACHE_PATH) as f:
-                json_cache = json.load(f)
-            self.cache: dict[str, UntappdCacheEntry] = {
-                query: UntappdCacheEntry(*res) for query, res in json_cache.items()
-            }
-        except Exception:
-            self.cache = {}
+        self.db = get_db()
+        self.cache = UntappdSQLiteCache(self.db, cache_duration=BEER_CACHE_TIME)
         self.init_backends(backends)
-        atexit.register(self.save_cache, verbose=True)
 
     def init_backends(self, backends: Sequence[UntappdAPI | UntappdWeb]):
-        db = get_db()
         self.backends = backends or [
-            *[UntappdAPI(auth_token=token) for token in db.get_access_tokens(is_app=True)],  # App user tokens
+            *[UntappdAPI(auth_token=token) for token in self.db.get_access_tokens(is_app=True)],  # App user tokens
             UntappdAPI(),  # Strinks app credentials
-            *[UntappdAPI(auth_token=token) for token in db.get_access_tokens(is_app=False)],  # User tokens
+            *[UntappdAPI(auth_token=token) for token in self.db.get_access_tokens(is_app=False)],  # User tokens
             UntappdWeb(),  # Web scraper
         ]
         print(f"Untappd backends: {self.backends}")
@@ -63,12 +46,6 @@ class UntappdClient:
                 time.sleep(MIN_SECS_BETWEEN_RESTARTS - elapsed)
             self.last_time_at_first = now_jst()
 
-    def save_cache(self, verbose: bool = False) -> None:
-        if verbose:
-            print("Saving untappd cache...")
-        with open(CACHE_PATH, "w") as f:
-            json.dump(self.cache, f, ensure_ascii=False)
-
     def _query_beer(self, query: str) -> UntappdBeerResult | None:
         if (now_jst() - self.last_time_at_first).total_seconds() > 3600:  # rate limit resets every hour
             self.backend_idx = 0
@@ -85,21 +62,29 @@ class UntappdClient:
             self.backend_idx = 0
             self.last_time_at_first = now_jst()
         for query in beer.iter_untappd_queries():
-            cached_beer = self.cache.get(query)
-            if cached_beer is not None:
-                valid = now_jst() - datetime.fromtimestamp(cached_beer.timestamp, tz=JST) < BEER_CACHE_TIME
-                if valid:
-                    if cached_beer.beer_id is None:
+            # Check cache
+            beer_id, status = self.cache.get(query)
+
+            match status:
+                case CacheStatus.HIT:
+                    # Found in cache and valid
+                    if beer_id is None:
+                        # Was searched but not found on Untappd
                         continue
+                    # Get full beer details from API
                     while True:
                         try:
-                            return self.current_backend.get_beer_from_id(cached_beer.beer_id), query
+                            return self.current_backend.get_beer_from_id(beer_id), query
                         except RateLimitError:
                             self.next_backend()
-            res = self._query_beer(query)
-            self.cache[query] = UntappdCacheEntry(None if res is None else res.beer_id, int(now_jst().timestamp()))
-            if res is not None:
-                return res, query
+
+                case CacheStatus.MISS | CacheStatus.EXPIRED:
+                    # Not in cache or expired, query API
+                    res = self._query_beer(query)
+                    # Cache the result (beer_id can be None if not found)
+                    self.cache.set(query, res.beer_id if res else None)
+                    if res is not None:
+                        return res, query
         return None
 
     def iter_had_beers(

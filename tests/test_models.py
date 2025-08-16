@@ -121,7 +121,11 @@ class TestUserModel:
     def test_app_user_detection(self, in_memory_db):
         """Test that APP users are correctly identified."""
         app_user = User(
-            user_name="app_token", first_name="App", last_name=APP_USER_MARKER, access_token="app_token_123"
+            user_name="app_token",
+            first_name="App",
+            last_name=APP_USER_MARKER,
+            avatar_url="https://example.com/avatar.png",
+            access_token="app_token_123",
         )
         in_memory_db.session.add(app_user)
         in_memory_db.session.commit()
@@ -209,8 +213,20 @@ class TestBeerDB:
     def test_get_access_tokens(self, in_memory_db):
         """Test retrieving access tokens."""
         # Create regular and app users
-        regular_user = User(user_name="regular", first_name="Regular", last_name="User", access_token="regular_token")
-        app_user = User(user_name="app", first_name="App", last_name=APP_USER_MARKER, access_token="app_token")
+        regular_user = User(
+            user_name="regular",
+            first_name="Regular",
+            last_name="User",
+            avatar_url="https://example.com/regular.png",
+            access_token="regular_token",
+        )
+        app_user = User(
+            user_name="app",
+            first_name="App",
+            last_name=APP_USER_MARKER,
+            avatar_url="https://example.com/app.png",
+            access_token="app_token",
+        )
         in_memory_db.session.add(regular_user)
         in_memory_db.session.add(app_user)
         in_memory_db.session.commit()
