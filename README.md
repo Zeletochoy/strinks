@@ -37,6 +37,9 @@ UNTAPPD_CLIENT_ID=your_client_id
 UNTAPPD_CLIENT_SECRET=your_client_secret
 DEEPL_API_KEY=your_deepl_key
 OPENAI_API_KEY=your_openai_key  # Optional, for OCR features
+
+# Optional: Proxy for Untappd OAuth (if your server IP is blocked by Cloudflare)
+UNTAPPD_OAUTH_PROXY=https://user:pass@proxy-server:port
 ```
 
 ## Development
@@ -78,6 +81,24 @@ The project maintains **zero mypy errors**:
 uv run pre-commit run mypy --all-files
 ```
 
+## Database Migrations
+
+The project uses Alembic for database schema migrations:
+
+```bash
+# Generate a new migration after model changes
+uv run alembic revision --autogenerate -m "Description of changes"
+
+# Apply migrations to bring database to latest version
+uv run alembic upgrade head
+
+# View current migration status
+uv run alembic current
+
+# Downgrade to previous version
+uv run alembic downgrade -1
+```
+
 ## Usage
 
 ### CLI Commands
@@ -114,6 +135,7 @@ uv run python -m strinks.web.app
 ## Tech Stack
 
 - **SQLModel**: Database ORM with Pydantic integration
+- **Alembic**: Database schema migrations
 - **Flask**: Web framework for the UI
 - **BeautifulSoup4**: Web scraping
 - **Pydantic**: Data validation
@@ -129,27 +151,29 @@ The latest database (without the users table) is published [here](https://zeleto
 
 ## Shops
 
-## Current
+### Currently Supported
 
 - [Antenna America](https://www.antenna-america.com/)
-- [Beer Volta](http://beervolta.com/)
-- [Biyagura](https://www.biyagura.jp/)
-- [Cardinal Trading](https://retail.cardinaltrading.jp/)
+- [Beerzilla](https://tokyo-beerzilla.myshopify.com/)
 - [Chouseiya](https://www.chouseiya-beer.com/)
+- [Craft Beer Market](https://www.craftbeermarket.jp/) (multiple locations)
+- [CraftBeers](https://www.craftbeers.jp/)
 - [Dig The Line](https://dig-the-line-store.com/)
-- [Drink Up](https://drinkuppers-ecshop.stores.jp)
 - [Good Beer Faucets](https://gbfbottleshoppe.com/)
 - [Goodbeer](https://goodbeer.jp/)
 - [Hop Buds](https://hopbudsnagoya.com/)
-- [IBrew](https://craftbeerbar-ibrew.com//)
+- [IBrew](https://craftbeerbar-ibrew.com/)
 - [Ichi Go Ichi Ale](https://151l.shop/)
+- [Maruho](https://maruho-beer.com/)
 - [Ohtsuki](http://www.ohtsuki-saketen.com/)
+- [Slop Shop](https://slopshop.jp/)
+- [Threefeet](https://threefeet.co.jp/)
+- [Volta](http://beervolta.com/)
 
-## TODO
+### TODO
 
 - [Scissors](https://craftbeers.thebase.in/)
 - [Uchu Brewing](https://uchubrew.shop-pro.jp/)
 - [TDM 1874](https://search.rakuten.co.jp/search/mall/tdm1874/)
 - [Distant Shores Brewing](https://en.dsbtokyo.shop/shop)
 - [Jollys](https://www.ubereats.com/jp/tokyo/food-delivery/jollys/0Rr8RBPfTMyb7x89DH8mkQ?ps=1)
-- [Craft Beers](https://www.craftbeers.jp/)

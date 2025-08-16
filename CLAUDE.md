@@ -16,6 +16,9 @@ Strinks is a beer cost-performance monitoring system that scrapes beer prices fr
 - **Pre-commit Hooks**: Automated code quality with ruff, black, mypy, pyupgrade
 - **Timezone-aware Datetimes**: All datetime fields now properly handle JST timezone
 - **Test Suite**: Added comprehensive tests for models, shops, and utilities
+- **Database Migrations**: Added Alembic for schema version control
+- **OAuth Proxy Support**: Added proxy support for Untappd OAuth to bypass Cloudflare blocks
+- **Fixed Scrapers**: Beerzilla, DigTheLine, and Threefeet scrapers now working correctly
 
 ## Key Commands
 
@@ -59,6 +62,19 @@ uv run pytest --cov=strinks tests/
 
 # Type checking (should show 0 errors!)
 uv run pre-commit run mypy --all-files
+```
+
+### Database Migrations
+
+```bash
+# Generate a new migration after model changes
+uv run alembic revision --autogenerate -m "Description of changes"
+
+# Apply migrations to bring database to latest version
+uv run alembic upgrade head
+
+# View current migration status
+uv run alembic current
 ```
 
 ### CLI Tools
@@ -120,12 +136,18 @@ Required for full functionality:
 - `DEEPL_API_KEY` - DeepL API key for translations
 - `OPENAI_API_KEY` - OpenAI API key for OCR/parsing assistance
 
+Optional:
+
+- `UNTAPPD_OAUTH_PROXY` - HTTPS proxy URL for Untappd OAuth (if server IP is blocked by Cloudflare)
+
 ### Important Files
 
-- `strinks/api/untappd/untappd_cache.json` - Cache for Untappd beer lookups
+- `strinks/api/untappd/untappd_cache.json` - Legacy JSON cache for Untappd beer lookups (being migrated to SQLite)
 - `strinks/db.sqlite` - Main SQLite database
 - `strinks/api/translation.py` - Japanese brewery name translations
 - `strinks/api/shops/__init__.py` - Base shop scraper interface
+- `alembic/` - Database migration scripts
+- `strinks/db/tables.py` - SQLModel table definitions
 
 ## Implementation Notes
 
