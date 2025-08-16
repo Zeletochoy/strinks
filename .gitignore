@@ -28,10 +28,6 @@ htmlcov/
 # Project specific
 strinks/db.sqlite
 tmp.sqlite
-*.cache.json
-untappd_cache.json
-deepl_cache.json
-brewery_cache.json
 .env
 *.id_rsa
 *.id_rsa.pub

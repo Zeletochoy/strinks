@@ -50,4 +50,3 @@ repos:
     hooks:
       - id: prettier
         types_or: [yaml, markdown, json]
-        exclude: "deepl_cache.json"
