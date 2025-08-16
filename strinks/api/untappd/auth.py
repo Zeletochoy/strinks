@@ -68,7 +68,7 @@ def untappd_get_user_info(access_token: str) -> UserInfo:
     if not isinstance(data, dict):
         raise ValueError(f"Unexpected response format from Untappd: {data}")
 
-    if "meta" in data and data["meta"].get("http_code") != 200:
+    if "meta" in data and data["meta"].get("code") != 200:
         error_msg = data["meta"].get("error_detail", "Unknown error")
         raise ValueError(f"Untappd API error: {error_msg}")
 
