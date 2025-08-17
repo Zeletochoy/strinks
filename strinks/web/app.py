@@ -17,7 +17,9 @@ USER_ID_COOKIE = "strinks_user_id"
 def offerings():
     db = get_db()
     shop_id = request.args.get("shop_id", default=None, type=int)
-    value_factor = request.args.get("value_factor", default=8.0, type=float) or 8.0
+    value_factor = request.args.get("value_factor", default=8.0, type=float)
+    if value_factor is None:
+        value_factor = 8.0
     search = request.args.get("search", default=None, type=str)
     min_price = request.args.get("min_price", default=None, type=int)
     max_price = request.args.get("max_price", default=None, type=int)
@@ -115,7 +117,9 @@ def api_beers():
     """API endpoint for fetching beers with pagination."""
     db = get_db()
     shop_id = request.args.get("shop_id", default=None, type=int)
-    value_factor = request.args.get("value_factor", default=8.0, type=float) or 8.0
+    value_factor = request.args.get("value_factor", default=8.0, type=float)
+    if value_factor is None:
+        value_factor = 8.0
     search = request.args.get("search", default=None, type=str)
     min_price = request.args.get("min_price", default=None, type=int)
     max_price = request.args.get("max_price", default=None, type=int)

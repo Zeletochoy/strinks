@@ -39,6 +39,9 @@
         <input type="hidden" value="" name="value_factor" onchange="this.form.submit()">
         <label for="value_factor" class="mdl-textfield__label">Profile</label>
         <ul for="value_factor" class="mdl-menu mdl-menu--bottom-left mdl-js-menu" style="width: auto; min-width: 220px;">
+          <li class="mdl-menu__item" data-val="0"{% if value_factor == 0 %} data-selected="true"{% endif %}>
+            First Dibs
+          </li>
           <li class="mdl-menu__item" data-val="1"{% if value_factor == 1 %} data-selected="true"{% endif %}>
             The Cheapest Stuff
           </li>
@@ -48,7 +51,7 @@
           <li class="mdl-menu__item" data-val="4"{% if value_factor == 4 %} data-selected="true"{% endif %}>
             Balanced Drinker
           </li>
-          <li class="mdl-menu__item" data-val="8"{% if not value_factor or value_factor == 8 %} data-selected="true"{% endif %}>
+          <li class="mdl-menu__item" data-val="8"{% if value_factor == 8 or (value_factor is none) %} data-selected="true"{% endif %}>
             Salaryman Connoiseur
           </li>
           <li class="mdl-menu__item" data-val="12"{% if value_factor == 12 %} data-selected="true"{% endif %}>

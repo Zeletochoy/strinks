@@ -169,7 +169,9 @@ class BeerDB:
                 offering.price = price
                 offering.image_url = image_url
                 offering.updated_at = now_jst()
+                # Keep created_at unchanged for existing offerings
                 return offering
+        now = now_jst()
         offering = Offering(
             shop_id=shop.shop_id,
             beer_id=beer.beer_id,
@@ -177,7 +179,8 @@ class BeerDB:
             milliliters=milliliters,
             price=price,
             image_url=image_url,
-            updated_at=now_jst(),
+            created_at=now,  # Set created_at only for new offerings
+            updated_at=now,
         )
         self.session.add(offering)
         return offering
@@ -235,12 +238,16 @@ class BeerDB:
             )
             statement = statement.where(~exists(subquery))
 
-        statement = (
-            statement.order_by(func.beer_value(Beer.rating, Offering.price / Offering.milliliters).desc())
-            .distinct()
-            .limit(n)
-            .offset(offset)
-        )
+        # Sort by created_at for "First Dibs" profile (value_factor=0), otherwise by value
+        if value_factor == 0:
+            statement = statement.order_by(col(Offering.created_at).desc()).distinct().limit(n).offset(offset)
+        else:
+            statement = (
+                statement.order_by(func.beer_value(Beer.rating, Offering.price / Offering.milliliters).desc())
+                .distinct()
+                .limit(n)
+                .offset(offset)
+            )
 
         return self.session.exec(statement)
 

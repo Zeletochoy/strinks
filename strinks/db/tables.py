@@ -129,6 +129,7 @@ class Offering(SQLModel, table=True):
     url: str
     milliliters: int
     price: int
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, primary_key=True))
     image_url: str | None = None
 
