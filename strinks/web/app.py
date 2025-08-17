@@ -1,4 +1,4 @@
-from flask import Flask, make_response, redirect, render_template, request
+from flask import Flask, jsonify, make_response, redirect, render_template, request
 
 from ..api.styles import GROUPED_STYLES_WITH_IDS, STYLES, get_styles_by_ids
 from ..api.untappd import UNTAPPD_OAUTH_URL, untappd_get_oauth_token, untappd_get_user_info
@@ -8,6 +8,7 @@ app = Flask(__name__)
 
 
 TOP_N = 150
+PAGE_SIZE = 60
 USER_ID_COOKIE = "strinks_user_id"
 
 
@@ -34,7 +35,7 @@ def offerings():
     user_ratings = {rating.beer.beer_id: rating.rating for rating in (user.ratings if user is not None else [])}
 
     beers = db.get_best_cospa(
-        TOP_N,
+        PAGE_SIZE,  # Load only first page initially
         value_factor,
         search=search,
         min_price=min_price,
@@ -107,3 +108,55 @@ def auth():
             user = db.create_user(user_info)
     resp.set_cookie(USER_ID_COOKIE, str(user.id))
     return resp
+
+
+@app.route("/api/beers")
+def api_beers():
+    """API endpoint for fetching beers with pagination."""
+    db = get_db()
+    shop_id = request.args.get("shop_id", default=None, type=int)
+    value_factor = request.args.get("value_factor", default=8.0, type=float) or 8.0
+    search = request.args.get("search", default=None, type=str)
+    min_price = request.args.get("min_price", default=None, type=int)
+    max_price = request.args.get("max_price", default=None, type=int)
+    exclude_had = request.args.get("exclude_had", default="", type=str) == "on"
+    page = request.args.get("page", default=0, type=int)
+
+    style_ids_str = request.args.get("styles", default="", type=str)
+    style_ids = [int(i) for i in style_ids_str.split(",")] if style_ids_str else None
+    enabled_styles = get_styles_by_ids(style_ids) if style_ids else None
+
+    countries_str = request.args.get("countries", default="", type=str)
+    selected_countries = countries_str.split(",") if countries_str else None
+
+    user_id = request.cookies.get(USER_ID_COOKIE, None)
+    user = db.get_user(int(user_id)) if user_id is not None else None
+    user_ratings = {rating.beer.beer_id: rating.rating for rating in (user.ratings if user is not None else [])}
+
+    beers = list(
+        db.get_best_cospa(
+            PAGE_SIZE,
+            value_factor,
+            search=search,
+            min_price=min_price,
+            max_price=max_price,
+            shop_id=shop_id,
+            styles=enabled_styles,
+            exclude_user_had=user.id if exclude_had and user is not None else None,
+            countries=selected_countries,
+            offset=page * PAGE_SIZE,
+        )
+    )
+
+    # Render beer cards HTML
+    beer_cards_html = []
+    for beer in beers:
+        beer_card = render_template("offering_card.html", beer=beer, user_ratings=user_ratings)
+        beer_cards_html.append(beer_card)
+
+    return jsonify(
+        {
+            "beers": beer_cards_html,
+            "has_more": len(beers) == PAGE_SIZE,
+        }
+    )

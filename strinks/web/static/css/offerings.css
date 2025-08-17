@@ -67,3 +67,39 @@
     width: auto;
     flex-shrink: 0;
 }
+
+/* View more shops styling */
+.more-offerings-container {
+    padding: 0 16px 8px 16px;
+}
+
+.view-more-shops {
+    display: inline-flex;
+    align-items: center;
+    color: #1976D2;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 4px 0;
+    transition: color 0.2s ease;
+}
+
+.view-more-shops:hover {
+    color: #1565C0;
+}
+
+.more-shops-icon {
+    margin-left: 6px;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.more-offerings {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.more-offerings:not(.hidden) {
+    max-height: 500px;
+    transition: max-height 0.3s ease-in;
+}

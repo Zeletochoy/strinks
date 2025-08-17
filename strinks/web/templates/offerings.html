@@ -133,18 +133,29 @@
     </div>
   </div>
 </form>
-<div class="mdl-grid">
+<div class="mdl-grid" id="beer-grid">
   {% for beer in beers %}
-  <div class="mdl-cell mdl-cell--4-col">
+  <div class="mdl-cell mdl-cell--4-col beer-card">
     {% include "offering_card.html" %}
   </div>
   {% endfor %}
 </div>
+<div id="loading-indicator" style="text-align: center; padding: 20px; display: none;">
+  <div class="mdl-spinner mdl-js-spinner is-active"></div>
+</div>
+<div id="end-of-results" style="text-align: center; padding: 20px; display: none;">
+  <p>No more beers to load</p>
+</div>
+
+<!-- Back to top button -->
+<button id="back-to-top" class="mdl-button mdl-js-button mdl-button--fab mdl-button--colored" style="position: fixed; bottom: 20px; right: 20px; display: none; z-index: 100;">
+  <i class="fas fa-arrow-up"></i>
+</button>
 
 <script src="https://cdn.scaleflex.it/filerobot/js-cloudimage-responsive/lazysizes.min.js"></script>
 <script src="https://cdn.scaleflex.it/plugins/js-cloudimage-responsive/4.6.6/js-cloudimage-responsive.min.js"></script>
 <script/>
-  const ciResponsive = new window.CIResponsive({
+  window.ciResponsive = new window.CIResponsive({
     token: "azcojmscrq",
     lazyLoading: true
   });

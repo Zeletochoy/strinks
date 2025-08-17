@@ -193,6 +193,7 @@ class BeerDB:
         max_price: int | None = None,
         exclude_user_had: int | None = None,  # user ID
         countries: Iterable[str] | None = None,
+        offset: int = 0,
     ) -> Iterator[Beer]:
         def beer_value(rating, cost):
             return (value_factor**rating) / cost
@@ -238,6 +239,7 @@ class BeerDB:
             statement.order_by(func.beer_value(Beer.rating, Offering.price / Offering.milliliters).desc())
             .distinct()
             .limit(n)
+            .offset(offset)
         )
 
         return self.session.exec(statement)

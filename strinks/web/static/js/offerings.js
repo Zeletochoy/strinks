@@ -2,6 +2,24 @@ function updateValueFactor(value) {
   document.getElementById("value_factor").innerHTML = value;
 }
 
+// Toggle more shops display
+function toggleMoreShops(event, beerId) {
+  event.preventDefault();
+  var moreOfferings = document.getElementById('more-offerings-' + beerId);
+  var link = event.currentTarget;
+  var icon = link.querySelector('.more-shops-icon');
+
+  if (moreOfferings.classList.contains('hidden')) {
+    moreOfferings.classList.remove('hidden');
+    icon.classList.remove('fa-chevron-down');
+    icon.classList.add('fa-chevron-up');
+  } else {
+    moreOfferings.classList.add('hidden');
+    icon.classList.remove('fa-chevron-up');
+    icon.classList.add('fa-chevron-down');
+  }
+}
+
 // Country filter functions
 let toggleCountryMenuController = new AbortController();
 
@@ -72,6 +90,95 @@ function updateCountries() {
   }
 }
 
+// Infinite scroll variables
+let currentPage = 1;
+let isLoading = false;
+let hasMore = true;
+
+function loadMoreBeers() {
+  if (isLoading || !hasMore) return;
+
+  isLoading = true;
+  document.getElementById('loading-indicator').style.display = 'block';
+
+  // Get current filter parameters
+  const params = new URLSearchParams(window.location.search);
+  params.set('page', currentPage);
+
+  fetch('/api/beers?' + params.toString())
+    .then(response => response.json())
+    .then(data => {
+      const beerGrid = document.getElementById('beer-grid');
+
+      // Create temporary container to parse HTML
+      const tempDiv = document.createElement('div');
+
+      data.beers.forEach(beerHtml => {
+        tempDiv.innerHTML = beerHtml;
+        const beerCard = document.createElement('div');
+        beerCard.className = 'mdl-cell mdl-cell--4-col beer-card';
+        beerCard.innerHTML = tempDiv.firstElementChild.outerHTML;
+        beerGrid.appendChild(beerCard);
+      });
+
+      // Upgrade MDL components in new cards
+      if (typeof componentHandler !== 'undefined') {
+        componentHandler.upgradeAllRegistered();
+      }
+
+      // Re-initialize cloudimage for new images
+      if (window.ciResponsive) {
+        window.ciResponsive.process();
+      }
+
+      hasMore = data.has_more;
+      currentPage++;
+      isLoading = false;
+
+      document.getElementById('loading-indicator').style.display = 'none';
+
+      if (!hasMore) {
+        document.getElementById('end-of-results').style.display = 'block';
+      }
+
+      // Set up observer for the new last card
+      setupIntersectionObserver();
+    })
+    .catch(error => {
+      console.error('Error loading more beers:', error);
+      isLoading = false;
+      document.getElementById('loading-indicator').style.display = 'none';
+    });
+}
+
+let observer = null;
+
+function setupIntersectionObserver() {
+  if (observer) {
+    observer.disconnect();
+  }
+
+  const options = {
+    root: null,
+    rootMargin: '200px',
+    threshold: 0.1
+  };
+
+  observer = new IntersectionObserver(function(entries) {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        loadMoreBeers();
+      }
+    });
+  }, options);
+
+  // Observe the last beer card
+  const beerCards = document.querySelectorAll('.beer-card');
+  if (beerCards.length > 0 && hasMore) {
+    observer.observe(beerCards[beerCards.length - 1]);
+  }
+}
+
 // Initialize MDL components when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
   // Upgrade all MDL components
@@ -90,4 +197,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initialize countries based on current checkboxes
   updateCountries();
+
+  // Set up infinite scroll
+  setupIntersectionObserver();
+
+  // Back to top button
+  const backToTopButton = document.getElementById('back-to-top');
+
+  window.addEventListener('scroll', function() {
+    if (window.pageYOffset > 300) {
+      backToTopButton.style.display = 'block';
+    } else {
+      backToTopButton.style.display = 'none';
+    }
+  });
+
+  backToTopButton.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 });
