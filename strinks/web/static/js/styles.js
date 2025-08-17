@@ -36,11 +36,25 @@ function toggleStyleMenu() {
 function updateStyles() {
   const input = document.getElementById("styles-input");
   const values = styleTree.values;
+  const button = document.getElementById("styles-button");
+
   if (values.length === Object.keys(styleTree.leafNodesById).length) {
     // Everything included by default, reduce URL params
     input.value = "";
+    button.textContent = "Styles";
   } else {
     input.value = values.join(",");
+    // Update button text with count
+    if (values.length > 0) {
+      button.textContent = `Styles (${values.length})`;
+    } else {
+      button.textContent = "Styles";
+    }
+  }
+
+  // Update clear filters visibility
+  if (typeof checkActiveFilters === 'function') {
+    checkActiveFilters();
   }
 }
 
@@ -67,14 +81,20 @@ function initStyleTree(containerId, groupedStyles, selectedStyles) {
     closeDepth: 1,
     loaded: function() {
       this.values = selectedStyles;
+      updateStyles();
     },
+    onChange: function() {
+      updateStyles();
+    }
   });
 }
 
 function selectAllStyles() {
   styleTree.values = Object.keys(styleTree.leafNodesById);
+  updateStyles();
 }
 
 function clearAllStyles() {
   styleTree.values = [];
+  updateStyles();
 }

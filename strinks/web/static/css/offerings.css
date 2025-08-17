@@ -103,3 +103,29 @@
     max-height: 500px;
     transition: max-height 0.3s ease-in;
 }
+
+/* Price range group */
+.price-range-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.price-range-label {
+    font-size: 12px;
+    color: rgba(0,0,0,.54);
+    margin-bottom: 4px;
+}
+
+/* Sticky filter bar */
+.filter-bar {
+    background: white;
+    z-index: 50;
+    transition: box-shadow 0.2s ease;
+}
+
+.filter-bar.sticky {
+    position: sticky;
+    top: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}

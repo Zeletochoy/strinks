@@ -15,14 +15,14 @@
 {% block content %}
 <form method="GET">
 
-  <div class="mdl-grid">
+  <div class="mdl-grid filter-bar">
     <!--Shop-->
     <div class="mdl-cell mdl-cell--2-col">
-      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label getmdl-select getmdl-select__fix-height">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label getmdl-select getmdl-select__fix-height" style="width: 100%;">
         <input type="text" value="" class="mdl-textfield__input" id="shop_id" readonly>
         <input type="hidden" value="" name="shop_id" onchange="this.form.submit()">
         <label for="shop_id" class="mdl-textfield__label">Shop</label>
-        <ul for="shop_id" class="mdl-menu mdl-menu--bottom-left mdl-js-menu">
+        <ul for="shop_id" class="mdl-menu mdl-menu--bottom-left mdl-js-menu" style="width: auto; min-width: 200px;">
           <li class="mdl-menu__item" data-val=""{% if not shop_id %} data-selected="true"{% endif %}>All</li>
           {% for shop in shops %}
           <li class="mdl-menu__item" data-val="{{shop.shop_id}}"{% if shop.shop_id == shop_id %} data-selected="true"{% endif %}>
@@ -34,11 +34,11 @@
     </div>
     <!--Value Factor-->
     <div class="mdl-cell mdl-cell--2-col">
-      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label getmdl-select getmdl-select__fix-height">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label getmdl-select getmdl-select__fix-height" style="width: 100%;">
         <input type="text" value="" class="mdl-textfield__input" id="value_factor" readonly>
         <input type="hidden" value="" name="value_factor" onchange="this.form.submit()">
         <label for="value_factor" class="mdl-textfield__label">Profile</label>
-        <ul for="value_factor" class="mdl-menu mdl-menu--bottom-left mdl-js-menu">
+        <ul for="value_factor" class="mdl-menu mdl-menu--bottom-left mdl-js-menu" style="width: auto; min-width: 220px;">
           <li class="mdl-menu__item" data-val="1"{% if value_factor == 1 %} data-selected="true"{% endif %}>
             The Cheapest Stuff
           </li>
@@ -130,6 +130,12 @@
       <button type="submit" onclick="updateStyles(); updateCountries()" data-upgraded=",MaterialButton" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored">
         <i class="fas fa-redo" aria-hidden="true"></i>
       </button>
+    </div>
+    <!--Clear Filters-->
+    <div class="mdl-cell mdl-cell--1-col vertical-center shrink-width">
+      <a href="#" id="clear-filters" style="display: none; font-size: 14px; color: #F44336;" onclick="clearAllFilters(); return false;">
+        Clear filters
+      </a>
     </div>
   </div>
 </form>

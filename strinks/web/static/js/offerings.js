@@ -81,12 +81,20 @@ function updateCountries() {
   var countries = Array.from(checkedNodes).map(function(node) {
     return node.getAttribute('data-country');
   });
+  var button = document.getElementById('countries-button');
 
   // Don't send countries parameter when all are selected (like styles)
   if (countries.length === allNodes.length) {
     document.getElementById('countries-input').value = '';
+    button.textContent = 'Countries';
   } else {
     document.getElementById('countries-input').value = countries.join(',');
+    // Update button text with count
+    if (countries.length > 0) {
+      button.textContent = `Countries (${countries.length})`;
+    } else {
+      button.textContent = 'Countries';
+    }
   }
 }
 
@@ -179,6 +187,65 @@ function setupIntersectionObserver() {
   }
 }
 
+// Check if any filters are active
+function checkActiveFilters() {
+  const hasSearch = document.getElementById('search-input').value !== '';
+  const hasMinPrice = document.getElementById('min_price').value !== '';
+  const hasMaxPrice = document.getElementById('max_price').value !== '';
+  const hasExcludeHad = document.getElementById('had-checkbox') && document.getElementById('had-checkbox').checked;
+  const hasStyles = document.getElementById('styles-input').value !== '';
+  const hasCountries = document.getElementById('countries-input').value !== '';
+  const hasShop = document.querySelector('input[name="shop_id"]').value !== '';
+
+  const clearLink = document.getElementById('clear-filters');
+  if (hasSearch || hasMinPrice || hasMaxPrice || hasExcludeHad || hasStyles || hasCountries || hasShop) {
+    clearLink.style.display = 'inline-block';
+  } else {
+    clearLink.style.display = 'none';
+  }
+}
+
+// Clear all filters
+function clearAllFilters() {
+  // Clear search
+  document.getElementById('search-input').value = '';
+
+  // Clear price range
+  document.getElementById('min_price').value = '';
+  document.getElementById('max_price').value = '';
+
+  // Clear exclude had
+  const hadCheckbox = document.getElementById('had-checkbox');
+  if (hadCheckbox) {
+    hadCheckbox.checked = false;
+    const mdlCheckbox = hadCheckbox.parentElement.MaterialCheckbox;
+    if (mdlCheckbox) {
+      mdlCheckbox.uncheck();
+    }
+  }
+
+  // Clear shop
+  const shopInput = document.querySelector('input[name="shop_id"]');
+  if (shopInput) {
+    shopInput.value = '';
+    const shopDisplay = document.getElementById('shop_id');
+    if (shopDisplay) {
+      shopDisplay.value = 'All';
+    }
+  }
+
+  // Clear styles
+  if (typeof selectAllStyles === 'function') {
+    selectAllStyles();
+  }
+
+  // Clear countries
+  selectAllCountries();
+
+  // Submit form to refresh
+  document.querySelector('form').submit();
+}
+
 // Initialize MDL components when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
   // Upgrade all MDL components
@@ -192,6 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
       e.stopPropagation();
       this.classList.toggle('treejs-node__checked');
       updateCountries();
+      checkActiveFilters();
     });
   });
 
@@ -204,15 +272,38 @@ document.addEventListener('DOMContentLoaded', function() {
   // Back to top button
   const backToTopButton = document.getElementById('back-to-top');
 
+  // Sticky filter bar
+  const filterBar = document.querySelector('.filter-bar');
+
   window.addEventListener('scroll', function() {
+    // Back to top button visibility
     if (window.pageYOffset > 300) {
       backToTopButton.style.display = 'block';
     } else {
       backToTopButton.style.display = 'none';
+    }
+
+    // Sticky filter bar
+    if (window.pageYOffset > 100) {
+      filterBar.classList.add('sticky');
+    } else {
+      filterBar.classList.remove('sticky');
     }
   });
 
   backToTopButton.addEventListener('click', function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
+
+  // Check for active filters on load
+  checkActiveFilters();
+
+  // Monitor filter changes
+  document.getElementById('search-input').addEventListener('input', checkActiveFilters);
+  document.getElementById('min_price').addEventListener('input', checkActiveFilters);
+  document.getElementById('max_price').addEventListener('input', checkActiveFilters);
+  const hadCheckbox = document.getElementById('had-checkbox');
+  if (hadCheckbox) {
+    hadCheckbox.addEventListener('change', checkActiveFilters);
+  }
 });
