@@ -26,6 +26,9 @@ def offerings():
     style_ids = [int(i) for i in style_ids_str.split(",")] if style_ids_str else None
     enabled_styles = get_styles_by_ids(style_ids) if style_ids else None
 
+    countries_str = request.args.get("countries", default="", type=str)
+    selected_countries = countries_str.split(",") if countries_str else None
+
     user_id = request.cookies.get(USER_ID_COOKIE, None)
     user = db.get_user(int(user_id)) if user_id is not None else None
     user_ratings = {rating.beer.beer_id: rating.rating for rating in (user.ratings if user is not None else [])}
@@ -39,8 +42,10 @@ def offerings():
         shop_id=shop_id,
         styles=enabled_styles,
         exclude_user_had=user.id if exclude_had and user is not None else None,
+        countries=selected_countries,
     )
     shops = db.get_shops()
+    countries = db.get_countries()
 
     return render_template(
         "offerings.html",
@@ -53,6 +58,8 @@ def offerings():
         max_price=max_price,
         grouped_styles=GROUPED_STYLES_WITH_IDS,
         enabled_styles=list(set(style_ids) if style_ids else range(len(STYLES))),
+        countries=countries,
+        selected_countries=selected_countries or [],
         user=user,
         user_ratings=user_ratings,
         exclude_had=exclude_had,

@@ -4,7 +4,7 @@ import pytest
 
 from strinks.api.utils import now_jst
 from strinks.db.models import BeerDB
-from strinks.db.tables import APP_USER_MARKER, Beer, Offering, Shop, User
+from strinks.db.tables import APP_USER_MARKER, Beer, Brewery, Offering, Shop, User
 
 
 @pytest.fixture(scope="function")
@@ -28,6 +28,22 @@ def in_memory_db():
 
 
 @pytest.fixture
+def sample_brewery(in_memory_db):
+    """Create a sample brewery for testing."""
+    brewery = Brewery(
+        brewery_id=1,
+        name="Test Brewery",
+        country="United States",
+        city="Portland",
+        state="Oregon",
+        image_url="https://example.com/brewery.jpg",
+    )
+    in_memory_db.session.add(brewery)
+    in_memory_db.session.commit()
+    return brewery
+
+
+@pytest.fixture
 def sample_shop(in_memory_db):
     """Create a sample shop for testing."""
     shop = Shop(
@@ -44,12 +60,12 @@ def sample_shop(in_memory_db):
 
 
 @pytest.fixture
-def sample_beer(in_memory_db):
+def sample_beer(in_memory_db, sample_brewery):
     """Create a sample beer for testing."""
     beer = Beer(
         beer_id=123,
         name="Test IPA",
-        brewery="Test Brewery",
+        brewery_id=sample_brewery.brewery_id,
         style="IPA",
         abv=6.5,
         ibu=60,
@@ -65,10 +81,20 @@ def sample_beer(in_memory_db):
 class TestBeerModel:
     def test_beer_creation(self, in_memory_db):
         """Test creating a beer entry."""
+        # First create a brewery
+        brewery = Brewery(
+            brewery_id=2,
+            name="Test Brewery 2",
+            country="Belgium",
+            image_url="https://example.com/brewery2.jpg",
+        )
+        in_memory_db.session.add(brewery)
+        in_memory_db.session.commit()
+
         beer = Beer(
             beer_id=456,
             name="Test Lager",
-            brewery="Test Brewery 2",
+            brewery_id=brewery.brewery_id,
             style="Lager",
             abv=5.0,
             ibu=30,
@@ -82,7 +108,8 @@ class TestBeerModel:
         retrieved = in_memory_db.get_beer(456)
         assert retrieved is not None
         assert retrieved.name == "Test Lager"
-        assert retrieved.brewery == "Test Brewery 2"
+        assert retrieved.brewery_name == "Test Brewery 2"
+        assert retrieved.brewery_country == "Belgium"
         assert retrieved.abv == 5.0
 
     def test_beer_datetime_is_timezone_aware(self, sample_beer, in_memory_db):
@@ -169,15 +196,23 @@ class TestOfferingModel:
 class TestBeerDB:
     def test_insert_beer(self, in_memory_db):
         """Test inserting a beer through BeerDB."""
+        # First create a brewery
+        brewery = in_memory_db.insert_brewery(
+            brewery_id=3,
+            image_url="https://example.com/dark_brewery.jpg",
+            name="Dark Brewery",
+            country="Ireland",
+        )
+
         beer = in_memory_db.insert_beer(
             beer_id=789,
             image_url="https://example.com/stout.jpg",
             name="Test Stout",
-            brewery="Dark Brewery",
+            brewery_id=brewery.brewery_id,
             style="Stout",
-            abv="7.2",
-            ibu="45",
-            rating="4.5",
+            abv=7.2,
+            ibu=45,
+            rating=4.5,
             description="A rich, dark stout",
         )
 
@@ -198,15 +233,15 @@ class TestBeerDB:
             beer_id=sample_beer.beer_id,
             image_url="https://example.com/updated.jpg",
             name="Updated IPA",
-            brewery=sample_beer.brewery,
+            brewery_id=sample_beer.brewery_id,
             style=sample_beer.style,
-            abv="7.0",  # Changed
+            abv=7.0,  # Changed
             ibu=sample_beer.ibu,
             rating=sample_beer.rating,
         )
 
         assert beer.name == "Updated IPA"
-        assert beer.abv == "7.0"
+        assert beer.abv == 7.0
         # Updated_at should be different (we can't reliably compare timezone-aware/naive mix from SQLite)
         assert beer.updated_at is not None
 

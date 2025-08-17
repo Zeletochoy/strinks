@@ -38,7 +38,7 @@
     text-decoration: none;
 }
 
-#style-menu {
+#style-menu, #country-menu {
     position: absolute;
     z-index: 42;
     background-color: white;

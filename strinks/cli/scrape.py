@@ -40,15 +40,24 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
             )
         try:
             with db.commit_or_rollback():
+                # First ensure brewery exists
+                if beer.brewery_id is not None and beer.brewery_country:
+                    db.insert_brewery(
+                        brewery_id=beer.brewery_id,
+                        image_url="",  # We don't have brewery image from beer response
+                        name=beer.brewery,
+                        country=beer.brewery_country,
+                        city=beer.brewery_city,
+                        state=beer.brewery_state,
+                        check_existence=True,
+                    )
+
+                # Then insert the beer
                 db_beer = db.insert_beer(
                     beer_id=beer.beer_id,
                     image_url=beer.image_url,
                     name=beer.name,
-                    brewery=beer.brewery,
                     brewery_id=beer.brewery_id,
-                    brewery_country=beer.brewery_country,
-                    brewery_city=beer.brewery_city,
-                    brewery_state=beer.brewery_state,
                     style=beer.style,
                     abv=beer.abv,
                     ibu=beer.ibu,

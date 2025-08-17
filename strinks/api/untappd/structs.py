@@ -15,8 +15,8 @@ class UntappdBeerResult(BaseModel):
     image_url: str
     name: str
     brewery: str
-    brewery_id: int | None = None
-    brewery_country: str | None = None
+    brewery_id: int
+    brewery_country: str
     brewery_city: str | None = None
     brewery_state: str | None = None
     style: str
@@ -35,6 +35,8 @@ class UntappdBreweryResult(BaseModel):
     image_url: str
     name: str
     country: str
+    city: str | None = None
+    state: str | None = None
 
 
 class UserInfo(NamedTuple):

@@ -102,9 +102,32 @@
         <div id="style-tree"></div>
       </div>
     </div>
+    <!--Countries-->
+    <div class="mdl-cell mdl-cell--1-col vertical-center shrink-width">
+      <input type="hidden" value="" name="countries" id="countries-input">
+      <button id="countries-button" type="button" class="mdl-button mdl-js-button mdl-button--raised" onclick="toggleCountryMenu(); event.stopPropagation()">
+        Countries
+      </button>
+      <div id="country-menu" class="mdl-shadow--2dp hidden" style="max-height: 400px; overflow-y: auto; z-index: 1000;">
+        <div style="margin: 10px 0px 0px 15px;">
+          <a href="#" onclick="selectAllCountries()">Select all</a> /
+          <a href="#" onclick="clearAllCountries()">Clear</a>
+        </div>
+        <ul style="list-style: none; padding: 10px;">
+          {% for country, count in countries %}
+          <li>
+            <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="country-{{loop.index}}">
+              <input type="checkbox" id="country-{{loop.index}}" class="mdl-checkbox__input country-checkbox" value="{{country}}" {% if country in selected_countries %}checked{% endif %}>
+              <span class="mdl-checkbox__label">{{country}} ({{count}})</span>
+            </label>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
     <!--Submit-->
     <div class="mdl-cell mdl-cell--1-col vertical-center shrink-width">
-      <button type="submit" onclick="updateStyles()" data-upgraded=",MaterialButton" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored">
+      <button type="submit" onclick="updateStyles(); updateCountries()" data-upgraded=",MaterialButton" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored">
         <i class="fas fa-redo" aria-hidden="true"></i>
       </button>
     </div>

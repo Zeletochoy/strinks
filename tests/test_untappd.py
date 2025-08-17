@@ -128,7 +128,9 @@ class TestUntappdAPI:
         mock_beer.beer_id = 123
         mock_beer.updated_at = now_jst() - timedelta(hours=1)
         mock_beer.name = "Test IPA"
-        mock_beer.brewery = "Test Brewery"
+        mock_beer.brewery_name = "Test Brewery"
+        mock_beer.brewery_id = 456
+        mock_beer.brewery_country = "United States"
         mock_beer.style = "IPA"
         mock_beer.abv = "6.5"
         mock_beer.ibu = "65"

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from sqlalchemy import Column, DateTime
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -15,8 +15,7 @@ class Beer(SQLModel, table=True):
     beer_id: int = Field(primary_key=True)
     image_url: str
     name: str
-    brewery: str  # Keep for backward compatibility, will migrate later
-    brewery_id: int | None = Field(default=None, foreign_key="breweries.brewery_id")
+    brewery_id: int = Field(foreign_key="breweries.brewery_id")
     style: str
     abv: float
     ibu: float | None = None
@@ -27,7 +26,7 @@ class Beer(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     description: str | None = None
 
-    brewery_rel: Optional["Brewery"] = Relationship()
+    brewery: "Brewery" = Relationship()
     offerings: list["Offering"] = Relationship(back_populates="beer")
     ratings: list["UserRating"] = Relationship(back_populates="beer")
     tags: list["BeerTag"] = Relationship(back_populates="beer")
@@ -36,8 +35,18 @@ class Beer(SQLModel, table=True):
     def tag_names(self) -> set[str]:
         return {assoc.tag.name for assoc in self.tags}
 
+    @property
+    def brewery_name(self) -> str:
+        """Get brewery name from relationship."""
+        return self.brewery.name
+
+    @property
+    def brewery_country(self) -> str:
+        """Get brewery country from relationship."""
+        return self.brewery.country
+
     def __str__(self) -> str:
-        return f"{self.brewery} - {self.name} ({self.style}, {self.abv}%, {self.ibu}IBU, {self.rating:0.02f})"
+        return f"{self.brewery_name} - {self.name} ({self.style}, {self.abv}%, {self.ibu}IBU, {self.rating:0.02f})"
 
     def __repr__(self) -> str:
         return f"Beer({self!s})"

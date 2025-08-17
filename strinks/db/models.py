@@ -94,17 +94,13 @@ class BeerDB:
         beer_id: int,
         image_url: str,
         name: str,
-        brewery: str,
+        brewery_id: int,
         style: str,
         abv: float,
         ibu: float,
         rating: float,
         description: str | None = None,
         tags: Sequence[tuple[FlavorTag, int]] | None = None,
-        brewery_id: int | None = None,
-        brewery_country: str | None = None,
-        brewery_city: str | None = None,
-        brewery_state: str | None = None,
         weighted_rating: float | None = None,
         rating_count: int | None = None,
         total_user_count: int | None = None,
@@ -117,7 +113,6 @@ class BeerDB:
             if beer is not None:
                 beer.image_url = image_url
                 beer.name = name
-                beer.brewery = brewery
                 beer.brewery_id = brewery_id
                 beer.style = style
                 beer.abv = abv
@@ -133,7 +128,6 @@ class BeerDB:
                 beer_id=beer_id,
                 image_url=image_url,
                 name=name,
-                brewery=brewery,
                 brewery_id=brewery_id,
                 style=style,
                 abv=abv,
@@ -149,18 +143,6 @@ class BeerDB:
         if tags is not None:
             for flavor_tag, count in tags:
                 beer.tags.append(BeerTag(beer_id=beer_id, tag_id=flavor_tag.tag_id, count=count))
-
-        # Insert or update brewery if we have the info
-        if brewery_id and brewery_country:
-            self.insert_brewery(
-                brewery_id=brewery_id,
-                image_url="",  # We don't have brewery image from beer response
-                name=brewery,
-                country=brewery_country,
-                city=brewery_city,
-                state=brewery_state,
-                check_existence=True,
-            )
 
         return beer
 
@@ -210,6 +192,7 @@ class BeerDB:
         min_price: int | None = None,
         max_price: int | None = None,
         exclude_user_had: int | None = None,  # user ID
+        countries: Iterable[str] | None = None,
     ) -> Iterator[Beer]:
         def beer_value(rating, cost):
             return (value_factor**rating) / cost
@@ -217,14 +200,14 @@ class BeerDB:
         conn = self.engine.raw_connection()
         conn.create_function("beer_value", 2, beer_value)  # type: ignore
 
-        statement = select(Beer).join(Offering).where(Beer.rating != 0, Offering.price != 0)
+        statement = select(Beer).join(Offering).join(Brewery).where(Beer.rating != 0, Offering.price != 0)
 
         if search is not None:
             like = f"%{escape_like(search)}%"
             statement = statement.where(
                 or_(
                     col(Beer.name).ilike(like),
-                    col(Beer.brewery).ilike(like),
+                    col(Brewery.name).ilike(like),
                 )
             )
 
@@ -238,6 +221,9 @@ class BeerDB:
 
         if styles is not None:
             statement = statement.where(col(Beer.style).in_(styles))
+
+        if countries is not None:
+            statement = statement.where(col(Brewery.country).in_(countries))
 
         if exclude_user_had is not None:
             # For relationship.any(), we need to use exists subquery
@@ -259,6 +245,19 @@ class BeerDB:
     def get_shops(self) -> Iterator[Shop]:
         statement = select(Shop).order_by(Shop.name)
         return self.session.exec(statement)
+
+    def get_countries(self) -> list[tuple[str, int]]:
+        """Get all countries with beer count, sorted by count."""
+        beer_count = func.count(col(Beer.beer_id))
+        statement = (
+            select(Brewery.country, beer_count.label("count"))
+            .select_from(Beer)
+            .join(Brewery)
+            .join(Offering)  # Only countries with current offerings
+            .group_by(Brewery.country)
+            .order_by(beer_count.desc())
+        )
+        return list(self.session.exec(statement))
 
     def remove_expired_offerings(self, shop: Shop, valid_ids: Iterable[int]) -> None:
         statement = delete(Offering).where(col(Offering.shop_id) == shop.shop_id, ~col(Offering.beer_id).in_(valid_ids))
