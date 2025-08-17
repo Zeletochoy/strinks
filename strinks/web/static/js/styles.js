@@ -51,11 +51,6 @@ function updateStyles() {
       button.textContent = "Styles";
     }
   }
-
-  // Update clear filters visibility
-  if (typeof checkActiveFilters === 'function') {
-    checkActiveFilters();
-  }
 }
 
 function initStyleTree(containerId, groupedStyles, selectedStyles) {
