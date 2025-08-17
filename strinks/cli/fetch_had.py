@@ -27,11 +27,23 @@ def fetch_user_had(user: User, db: BeerDB, verbose: bool) -> FetchSummary:
         # TODO: DB beers/ratings not updated
         try:
             with db.commit_or_rollback():
+                # First ensure brewery exists
+                if beer.brewery_id and beer.brewery_country:
+                    db.insert_brewery(
+                        brewery_id=beer.brewery_id,
+                        image_url="",
+                        name=beer.brewery,
+                        country=beer.brewery_country,
+                        city=beer.brewery_city,
+                        state=beer.brewery_state,
+                        check_existence=True,
+                    )
+
                 db_beer = db.insert_beer(
                     beer_id=beer.beer_id,
                     image_url=beer.image_url,
                     name=beer.name,
-                    brewery=beer.brewery,
+                    brewery_id=beer.brewery_id,
                     style=beer.style,
                     abv=beer.abv,
                     ibu=beer.ibu,
