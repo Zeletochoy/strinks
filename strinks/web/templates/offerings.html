@@ -108,21 +108,21 @@
       <button id="countries-button" type="button" class="mdl-button mdl-js-button mdl-button--raised" onclick="toggleCountryMenu(); event.stopPropagation()">
         Countries
       </button>
-      <div id="country-menu" class="mdl-shadow--2dp hidden" style="max-height: 400px; overflow-y: auto; z-index: 1000;">
+      <div id="country-menu" class="mdl-shadow--2dp hidden">
         <div style="margin: 10px 0px 0px 15px;">
-          <a href="#" onclick="selectAllCountries()">Select all</a> /
-          <a href="#" onclick="clearAllCountries()">Clear</a>
+          <a href="#" onclick="selectAllCountries(); return false;">Select all</a> /
+          <a href="#" onclick="clearAllCountries(); return false;">Clear</a>
         </div>
-        <ul style="list-style: none; padding: 10px;">
-          {% for country, count in countries %}
-          <li>
-            <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="country-{{loop.index}}">
-              <input type="checkbox" id="country-{{loop.index}}" class="mdl-checkbox__input country-checkbox" value="{{country}}" {% if country in selected_countries %}checked{% endif %}>
-              <span class="mdl-checkbox__label">{{country}} ({{count}})</span>
-            </label>
-          </li>
-          {% endfor %}
-        </ul>
+        <div class="treejs" style="max-height: 400px; overflow-y: auto;">
+          <div class="treejs-nodes" style="padding-left: 10px !important; margin-top: 0px;">
+            {% for country, count in countries %}
+            <div class="treejs-node {% if country in selected_countries %}treejs-node__checked{% endif %}" data-country="{{country}}">
+              <span class="treejs-checkbox"></span>
+              <span class="treejs-label">{{country}} ({{count}})</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </div>
     <!--Submit-->

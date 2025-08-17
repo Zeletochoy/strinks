@@ -4,6 +4,17 @@ let toggleStyleMenuController = new AbortController();
 
 function toggleStyleMenu() {
   const menu = document.getElementById("style-menu");
+  const countryMenu = document.getElementById("country-menu");
+
+  // Close country menu if it's open
+  if (countryMenu && !countryMenu.classList.contains("hidden")) {
+    countryMenu.classList.add("hidden");
+    // Abort any existing country menu listeners
+    if (typeof toggleCountryMenuController !== 'undefined') {
+      toggleCountryMenuController.abort();
+    }
+  }
+
   console.log(menu);
   if (menu.classList.toggle("hidden")) {
     toggleStyleMenuController.abort();

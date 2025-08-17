@@ -65,4 +65,5 @@
 
 .shrink-width {
     width: auto;
+    flex-shrink: 0;
 }

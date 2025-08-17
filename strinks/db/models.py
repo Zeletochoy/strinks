@@ -247,8 +247,8 @@ class BeerDB:
         return self.session.exec(statement)
 
     def get_countries(self) -> list[tuple[str, int]]:
-        """Get all countries with beer count, sorted by count."""
-        beer_count = func.count(col(Beer.beer_id))
+        """Get all countries with unique beer count, sorted by count."""
+        beer_count = func.count(col(Beer.beer_id).distinct())
         statement = (
             select(Brewery.country, beer_count.label("count"))
             .select_from(Beer)
