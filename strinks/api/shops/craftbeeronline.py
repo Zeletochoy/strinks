@@ -118,6 +118,11 @@ class CraftBeerOnline(Shop):
         # Clean up the name using existing utility
         cleaned_handle = clean_beer_name(cleaned_handle)
 
+        # If vendor is Rio Brewing, prepend brewery name to avoid generic queries
+        vendor = product.get("vendor", "")
+        if vendor == "リオ ブルーイング コー":
+            cleaned_handle = "Rio Brewing Co " + cleaned_handle
+
         return ShopBeer(
             raw_name=cleaned_handle,
             url=url,
