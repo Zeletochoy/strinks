@@ -27,6 +27,11 @@ function toggleCountryMenu() {
   const menu = document.getElementById('country-menu');
   const styleMenu = document.getElementById('style-menu');
 
+  if (!menu) {
+    console.error('Country menu not found');
+    return;
+  }
+
   // Close style menu if it's open
   if (styleMenu && !styleMenu.classList.contains('hidden')) {
     styleMenu.classList.add('hidden');
@@ -235,4 +240,37 @@ document.addEventListener('DOMContentLoaded', function() {
   backToTopButton.addEventListener('click', function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
+
+  // Mobile filter functionality
+  const mobileFilterToggle = document.getElementById('mobile-filter-toggle');
+  const mobileFilterOverlay = document.getElementById('mobile-filter-overlay');
+  // filterBar already declared above
+
+  function closeMobileFilters() {
+    filterBar.classList.remove('open');
+    mobileFilterOverlay.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  if (mobileFilterToggle) {
+    mobileFilterToggle.addEventListener('click', function() {
+      filterBar.classList.add('open');
+      mobileFilterOverlay.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    });
+  }
+
+  if (mobileFilterOverlay) {
+    mobileFilterOverlay.addEventListener('click', closeMobileFilters);
+  }
+
+  // Close on clicking the header (with X)
+  if (window.innerWidth <= 768 && filterBar) {
+    filterBar.addEventListener('click', function(e) {
+      // Check if the click is on the ::before pseudo-element area (header)
+      if (e.target === filterBar && e.offsetY < 50) {
+        closeMobileFilters();
+      }
+    });
+  }
 });

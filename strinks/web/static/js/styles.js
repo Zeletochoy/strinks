@@ -1,6 +1,8 @@
 let styleTree = null;
 let toggleStyleMenuController = new AbortController();
 
+// Make styleTree globally accessible
+window.styleTree = null;
 
 function toggleStyleMenu() {
   const menu = document.getElementById("style-menu");
@@ -35,10 +37,13 @@ function toggleStyleMenu() {
 
 function updateStyles() {
   const input = document.getElementById("styles-input");
-  const values = styleTree.values;
+  // Use 'this' if called from Tree callbacks, otherwise use global styleTree
+  const tree = this && this.values ? this : styleTree;
+  if (!tree) return;
+  const values = tree.values;
   const button = document.getElementById("styles-button");
 
-  if (values.length === Object.keys(styleTree.leafNodesById).length) {
+  if (values.length === Object.keys(tree.leafNodesById).length) {
     // Everything included by default, reduce URL params
     input.value = "";
     button.textContent = "Styles";
@@ -76,20 +81,28 @@ function initStyleTree(containerId, groupedStyles, selectedStyles) {
     closeDepth: 1,
     loaded: function() {
       this.values = selectedStyles;
-      updateStyles();
+      updateStyles.call(this);
     },
     onChange: function() {
-      updateStyles();
+      updateStyles.call(this);
     }
   });
+  // Also set the global reference
+  window.styleTree = styleTree;
 }
 
 function selectAllStyles() {
-  styleTree.values = Object.keys(styleTree.leafNodesById);
-  updateStyles();
+  if (styleTree) {
+    styleTree.values = Object.keys(styleTree.leafNodesById);
+    updateStyles();
+  }
+  return false;
 }
 
 function clearAllStyles() {
-  styleTree.values = [];
-  updateStyles();
+  if (styleTree) {
+    styleTree.values = [];
+    updateStyles();
+  }
+  return false;
 }

@@ -129,3 +129,152 @@
     top: 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+
+/* Responsive breakpoint */
+@media (max-width: 768px) {
+    /* Make filter bar a mobile drawer */
+    .filter-bar {
+        position: fixed !important;
+        top: 0 !important;
+        left: -100%;
+        width: 85%;
+        max-width: 320px;
+        height: 100vh;
+        background: white;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+        z-index: 200;
+        transition: left 0.3s ease;
+        overflow-y: auto;
+        display: block !important;
+        padding: 60px 16px 16px 16px !important;
+        margin: 0 !important;
+    }
+
+    .filter-bar.open {
+        left: 0;
+    }
+
+    /* Add header to mobile filter with close button */
+    .filter-bar::before {
+        content: "Filters ✕";
+        display: block;
+        padding: 16px;
+        background: #1976D2;
+        color: white;
+        font-size: 18px;
+        font-weight: 500;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 85%;
+        max-width: 320px;
+        box-sizing: border-box;
+        z-index: 201;
+        cursor: pointer;
+    }
+
+    /* Style filter bar content for mobile */
+    .filter-bar .mdl-cell {
+        width: calc(100% - 16px) !important;
+        margin: 8px !important;
+        display: block !important;
+    }
+
+    .filter-bar .mdl-textfield {
+        width: 100% !important;
+        display: block !important;
+    }
+
+    /* Style submit button on mobile as regular button */
+    .filter-bar button[type="submit"] {
+        width: calc(100% - 32px) !important;
+        margin: 16px !important;
+        display: block !important;
+        height: 48px !important;
+        font-size: 16px !important;
+        border-radius: 4px !important;
+        padding: 0 16px !important;
+    }
+
+    /* Remove FAB styling on mobile */
+    .filter-bar button[type="submit"].mdl-button--fab {
+        min-width: unset !important;
+        width: calc(100% - 32px) !important;
+        padding: 0 16px !important;
+    }
+
+    /* Hide the refresh icon, show text instead */
+    .filter-bar button[type="submit"] i {
+        display: none !important;
+    }
+
+    .filter-bar button[type="submit"]::after {
+        content: "Apply Filters";
+    }
+
+    /* Style/Country buttons full width */
+    .filter-bar #styles-button,
+    .filter-bar #countries-button {
+        width: 100% !important;
+    }
+
+    /* Checkbox styles */
+    .filter-bar .mdl-checkbox {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Mobile filter toggle button positioning */
+    .mobile-filter-toggle {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100;
+        background: #2196F3 !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .mobile-filter-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 199;
+    }
+
+    .mobile-filter-overlay.show {
+        display: block;
+    }
+
+    #beer-grid {
+        margin-top: 16px;
+    }
+
+    .beer-card {
+        width: 100% !important;
+    }
+
+    /* Adjust back-to-top button to not overlap with filter button */
+    #back-to-top {
+        bottom: 80px !important;
+    }
+}
+
+/* Mobile filter toggle - hidden on desktop */
+.mobile-filter-toggle {
+    display: none !important;
+}
+
+.mobile-filter-overlay {
+    display: none;
+}
+
+/* Show filter button only on mobile */
+@media (max-width: 768px) {
+    .mobile-filter-toggle {
+        display: block !important;
+    }
+}
