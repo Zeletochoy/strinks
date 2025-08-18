@@ -168,13 +168,15 @@ class TestUserModel:
 class TestOfferingModel:
     def test_offering_creation(self, in_memory_db, sample_shop, sample_beer):
         """Test creating an offering."""
+        now = now_jst()
         offering = Offering(
             shop_id=sample_shop.shop_id,
             beer_id=sample_beer.beer_id,
             url="https://testshop.com/beer/123",
             milliliters=350,
             price=500,
-            updated_at=now_jst(),
+            created_at=now,
+            updated_at=now,
         )
         in_memory_db.session.add(offering)
         in_memory_db.session.commit()

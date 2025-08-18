@@ -226,6 +226,8 @@ class TestUntappdIntegration:
             image_url="https://example.com/beer.jpg",
             name="Test Beer",
             brewery="Test Brewery",
+            brewery_id=789,
+            brewery_country="United States",
             style="Lager",
             abv=5.0,
             ibu=30,
