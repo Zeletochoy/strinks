@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+  .guide-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .guide-section {
+    margin-bottom: 40px;
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .guide-section h2 {
+    color: #3f51b5;
+    margin-bottom: 16px;
+    font-size: 24px;
+  }
+
+  .guide-section h3 {
+    color: #666;
+    margin-top: 20px;
+    margin-bottom: 12px;
+    font-size: 18px;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .feature-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 16px;
+  }
+
+  .feature-card h4 {
+    color: #3f51b5;
+    margin-bottom: 8px;
+  }
+
+  .profile-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .profile-list li {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+
+  .profile-list li strong {
+    color: #3f51b5;
+  }
+
+  .tip-box {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 12px;
+    margin: 16px 0;
+  }
+
+  .tip-box i {
+    color: #ff9800;
+    margin-right: 8px;
+  }
+
+  .keyboard-shortcut {
+    font-family: monospace;
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+  }
+
+  .filter-example {
+    background: #f5f5f5;
+    padding: 12px;
+    border-radius: 4px;
+    margin: 8px 0;
+  }
+
+  @media (max-width: 768px) {
+    .guide-container {
+      padding: 10px;
+    }
+
+    .guide-section {
+      padding: 16px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="guide-container">
+  <div class="guide-section">
+    <h2><i class="fas fa-rocket"></i> Welcome to Strinks!</h2>
+    <p>
+      Strinks helps you find the best value craft beers in Japan by combining real-time prices from online shops
+      with ratings from Untappd. Whether you're a budget-conscious beer lover or a quality-seeking connoisseur,
+      we've got you covered!
+    </p>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-star"></i> Choosing Your Profile</h2>
+    <p>Select a profile that matches your beer shopping style:</p>
+
+    <ul class="profile-list">
+      <li>
+        <strong><i class="fas fa-clock"></i> First Dibs</strong><br>
+        Shows the newest offerings first. Be the first to try newly available beers!
+      </li>
+      <li>
+        <strong><i class="fas fa-coins"></i> The Cheapest Stuff</strong><br>
+        Maximum focus on price. Find the absolute lowest prices.
+      </li>
+      <li>
+        <strong><i class="fas fa-tags"></i> Great Deals</strong><br>
+        Heavily prioritizes price while considering quality.
+      </li>
+      <li>
+        <strong><i class="fas fa-yen-sign"></i> Balanced Drinker</strong><br>
+        Gives more weight to price while still considering quality.
+      </li>
+      <li>
+        <strong><i class="fas fa-balance-scale"></i> Salaryman Connoiseur</strong> (Default)<br>
+        Balances price and quality. The sweet spot for everyday drinking.
+      </li>
+      <li>
+        <strong><i class="fas fa-star"></i> High Class</strong><br>
+        Prioritizes quality over price for a premium experience.
+      </li>
+      <li>
+        <strong><i class="fas fa-trophy"></i> I Spare No Expense</strong><br>
+        Rating is everything. When only the absolute best will do.
+      </li>
+    </ul>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>Pro Tip:</strong> Your profile choice affects how beers are ranked. Experiment to find what works for you!
+    </div>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-filter"></i> Using Filters</h2>
+    <p>Narrow down your search to find exactly what you're looking for:</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h4><i class="fas fa-search"></i> Search</h4>
+        <p>Type any part of a beer or brewery name. Works with both English and Japanese.</p>
+        <div class="filter-example">
+          Examples: "IPA", "Yoho", "よなよな"
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <h4><i class="fas fa-tags"></i> Beer Styles</h4>
+        <p>Select multiple styles to see only those types. The number shows how many beers match.</p>
+        <div class="filter-example">
+          Example: IPA, Stout, Pilsner
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <h4><i class="fas fa-globe"></i> Countries</h4>
+        <p>Filter by brewery country. Great for exploring international beers or staying local.</p>
+        <div class="filter-example">
+          Popular: Japan, United States, Belgium
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <h4><i class="fas fa-coins"></i> Price Range</h4>
+        <p>Set minimum and maximum total price per can/bottle.</p>
+        <div class="filter-example">
+          Example: ¥400 min, ¥800 max
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>Pro Tip:</strong> Combine multiple filters to find exactly what you're looking for.
+    </div>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-shopping-cart"></i> Understanding Offerings</h2>
+
+    <h3>Price Display</h3>
+    <p>Each beer shows:</p>
+    <ul>
+      <li><strong>Price per ml:</strong> The best way to compare value across different can/bottle sizes</li>
+      <li><strong>Total price:</strong> What you'll actually pay</li>
+      <li><strong>Volume:</strong> Can/bottle size in ml</li>
+      <li><strong>Shop name:</strong> Where to buy it</li>
+    </ul>
+
+    <h3>Multiple Shops</h3>
+    <p>
+      We show the cheapest shop first. Click "View more shops" to see all available options.
+      Sometimes paying a bit more at a shop you're already ordering from saves on shipping!
+    </p>
+
+    <h3>Quick Links</h3>
+    <ul>
+      <li><strong>Beer name/image:</strong> Click to view the beer on Untappd for detailed info and reviews</li>
+      <li><strong>Shop offering:</strong> Click to go directly to the product page on the shop's website</li>
+    </ul>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>Pro Tip:</strong> Check multiple shops before ordering. Some shops offer free shipping above certain amounts.
+    </div>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-mobile-alt"></i> Mobile Features</h2>
+
+    <p>On mobile devices:</p>
+    <ul>
+      <li>The filter bar is optimized for smaller screens</li>
+      <li>Infinite scroll works smoothly - just keep scrolling to load more beers</li>
+      <li>All desktop features are available on mobile</li>
+    </ul>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-infinity"></i> Infinite Scroll</h2>
+    <p>
+      No need to click "Next Page"! As you scroll down, we automatically load more beers.
+      Each batch loads 60 beers at a time. The loading happens seamlessly in the background.
+    </p>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>Pro Tip:</strong> Use filters to reduce the total number of results for faster browsing.
+    </div>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-user"></i> Untappd Integration</h2>
+
+    <p>Log in with your Untappd account to:</p>
+    <ul>
+      <li>See your personal beer ratings on each beer card</li>
+      <li>Exclude beers you've already tried from results (optional filter)</li>
+    </ul>
+
+    <p>
+      All beer ratings and information come from Untappd's community of beer enthusiasts.
+      The ratings help you identify quality beers you haven't tried yet.
+    </p>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-store"></i> Supported Shops</h2>
+    <p>
+      We currently track prices from multiple online beer shops in Japan, updated regularly.
+      Visit the <a href="/shops">Shops page</a> to see the full list and last update times.
+    </p>
+
+    <div class="tip-box">
+      <i class="fas fa-info-circle"></i>
+      <strong>Note:</strong> Prices exclude shipping costs, which vary by shop and order size.
+    </div>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-question"></i> FAQ</h2>
+
+    <h3>How often are prices updated?</h3>
+    <p>Prices are typically updated daily. Check the shop's "last updated" time on the Shops page.</p>
+
+    <h3>Why don't I see a beer I know exists?</h3>
+    <p>We only show beers currently available in at least one tracked shop. Out-of-stock items are hidden.</p>
+
+    <h3>What does the rating number mean?</h3>
+    <p>It's the average Untappd rating (0-5 scale) from users worldwide. Generally, 3.5+ is good, 4.0+ is excellent.</p>
+
+    <h3>Can I suggest a new shop to track?</h3>
+    <p>Yes! Open an issue on our <a href="https://github.com/Zeletochoy/strinks" target="_blank">GitHub page</a>.</p>
+  </div>
+
+  <div class="guide-section">
+    <h2><i class="fas fa-code"></i> Open Source</h2>
+    <p>
+      Strinks is open source! Check out the code, report issues, or contribute on
+      <a href="https://github.com/Zeletochoy/strinks" target="_blank">GitHub</a>.
+    </p>
+  </div>
+</div>
+{% endblock %}

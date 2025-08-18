@@ -11,6 +11,18 @@
     font-size: 16px;
 }
 
+/* Responsive navigation for mobile */
+@media (max-width: 768px) {
+    .mdl-navigation__link {
+        font-size: 14px;
+        padding: 0 8px;
+    }
+
+    .mdl-layout-title {
+        display: none;
+    }
+}
+
 .title-link {
     text-decoration: none;
     color: white;

@@ -79,6 +79,14 @@ def shops():
     return render_template("shops.html", shops=shops, user=user)
 
 
+@app.route("/guide")
+def guide():
+    db = get_db()
+    user_id = request.cookies.get(USER_ID_COOKIE, None)
+    user = db.get_user(int(user_id)) if user_id is not None else None
+    return render_template("guide.html", user=user)
+
+
 @app.route("/login")
 def login():
     return redirect(UNTAPPD_OAUTH_URL)
