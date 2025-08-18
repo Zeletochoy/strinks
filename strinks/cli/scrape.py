@@ -30,7 +30,10 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
         res = untappd.try_find_beer(offering)
         if res is None:
             if verbose:
-                logger.debug(f"{offering.raw_name}: Not found on Untappd")
+                # Show the queries that were tried
+                queries = list(offering.iter_untappd_queries())
+                queries_str = " | ".join(f'"{q}"' for q in queries)  # Show all queries
+                logger.debug(f"{offering.raw_name}: Not found on Untappd. Tried: {queries_str}")
             continue
         num_untappd += 1
         beer, query = res

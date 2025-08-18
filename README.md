@@ -193,3 +193,28 @@ The latest database (without the users table) is published [here](https://zeleto
 - [TDM 1874](https://search.rakuten.co.jp/search/mall/tdm1874/)
 - [Distant Shores Brewing](https://en.dsbtokyo.shop/shop)
 - [Jollys](https://www.ubereats.com/jp/tokyo/food-delivery/jollys/0Rr8RBPfTMyb7x89DH8mkQ?ps=1)
+
+### High Priority (To Implement)
+
+- [BEERSHOP](https://beershop.jp/) - Well-structured, easy to scrape
+- [Beer no Engawa (ビールの縁側)](https://beer-engawa.jp/) - Large craft beer portal
+- [Craft Beer Online](https://beeronline.jp/) - Good variety, domestic and imported
+- [BUBBLES](https://kitakatabbb.com/) - Claims lowest prices in Japan
+
+### Medium Priority
+
+- [Belly Craft](https://bellycraft.jp/) - Curated specialty craft beer store
+- [Baird Beer](https://shop.bairdbeer.com/) - Popular Shizuoka brewery
+- [Minoh Beer](https://minoh-beer.jp/) - Award-winning Osaka brewery
+- [Kyoto Brewing](https://kyotobrewing.com/) - Belgian-American style brewery
+
+### Low Priority
+
+- [Baeren Beer](https://baeren.jp/) - Tohoku regional brewery
+- [DD4D Brewing](https://japandemic.co.jp/) - Ehime craft brewery
+- [Craft Liquors](https://shop.craftliquors.jp/) - Needs investigation for pricing
+- [CRAFT BEER BASE](https://craftbeerbase.com/) - Needs investigation for pricing
+
+### Blocked
+
+- [Beer-Ma (びあマ)](http://www.beer-ma.com/) - Cloudflare protection
