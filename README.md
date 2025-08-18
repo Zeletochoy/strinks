@@ -132,6 +132,22 @@ uv run python -m strinks.web.app
 # Access at http://localhost:5000
 ```
 
+#### Features
+
+- **Infinite Scroll**: Automatically loads more beers as you scroll (60 beers per page)
+- **Advanced Filtering**:
+  - Filter by beer style (multiple selection)
+  - Filter by brewery country
+  - Price range filtering (min/max per ml)
+  - Search by beer or brewery name
+- **Profile Options**:
+  - Cheap Beer Seeker: Prioritizes price over rating
+  - Salaryman Connoisseur: Balanced price and quality (default)
+  - Quality Addict: Prioritizes rating over price
+  - First Dibs: Shows newest offerings first
+- **Expandable Offerings**: Shows cheapest shop initially with "View more shops" for additional options
+- **Mobile Responsive**: Optimized filter drawer for mobile devices
+
 ## Tech Stack
 
 - **SQLModel**: Database ORM with Pydantic integration
