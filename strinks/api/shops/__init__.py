@@ -1,10 +1,8 @@
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
-from functools import partial
-from typing import Dict, Optional, Set, Type
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, model_validator
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop

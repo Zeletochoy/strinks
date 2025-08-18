@@ -1,5 +1,0 @@
-tox
-pytest
-flake8
-mypy
-sqlalchemy[mypy]<2
