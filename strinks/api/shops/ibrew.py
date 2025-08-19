@@ -314,8 +314,8 @@ class IBrew(Shop):
 
     def get_db_entry(self, db: BeerDB) -> DBShop:
         """Get or create database entry for this shop."""
-        # Use location-specific display name if not Ebisu
-        display_name = self.display_name if self.location == "ebisu" else f"IBrew {self.location.title()}"
+        # Use location-specific display name for all locations
+        display_name = f"IBrew {self.location.title()}"
         return db.insert_shop(
             name=display_name,
             url="https://craftbeerbar-ibrew.com/",
