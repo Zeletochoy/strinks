@@ -108,6 +108,10 @@ def cli(database: click.Path | None, shop_name: str | None, verbose: bool):
 
     # Silence HTTP request logs from urllib3 (used by requests)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    # Silence OpenAI/httpx debug logs
+    logging.getLogger("openai").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
     shops = [cls() for _, cls in SHOP_MAP.items()] if shop_name is None else [SHOP_MAP[shop_name]()]
 

@@ -71,7 +71,8 @@ def get_shop_map_dynamic() -> dict[str, Callable[[], "Shop"]]:
                 # Add an entry for each location
                 for location in locations:
                     # Assume location is passed as a parameter to the constructor
-                    location_key = f"{short_name}-{location.lstrip(f'{short_name}-')}"
+                    # Don't double-prefix if location already starts with shop name
+                    location_key = location if location.startswith(f"{short_name}-") else f"{short_name}-{location}"
                     shop_map[location_key] = partial(shop_class, location=location)  # type: ignore[call-arg]
             except Exception as e:
                 # If get_locations fails, just add the class normally
