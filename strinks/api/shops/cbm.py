@@ -1,4 +1,5 @@
 import logging
+import re
 from collections.abc import Iterator
 from csv import DictReader
 from io import BytesIO
@@ -57,6 +58,7 @@ session = get_retrying_session()
 class CBM(Shop):
     short_name = "cbm"
     display_name = "Craft Beer Market"
+    _menu_map_cache: dict[str, str] | None = None
 
     @classmethod
     def get_locations(cls) -> list[str]:
@@ -64,11 +66,48 @@ class CBM(Shop):
         soup = BeautifulSoup(html, "html.parser")
         return [location for div in soup("div", class_="half") if (location := div["id"]) not in UNSUPPORTED_LOCATIONS]
 
+    @classmethod
+    def _get_menu_map(cls) -> dict[str, str]:
+        """Get mapping of location IDs to menu filenames, cached."""
+        if cls._menu_map_cache is not None:
+            return cls._menu_map_cache
+
+        html = session.get(LIST_URL).content
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Map location IDs to their menu filenames
+        location_menu_map = {}
+
+        # Find all location divs to get the order
+        locations = soup.find_all("div", class_="half")
+        location_ids = [loc.get("id") for loc in locations if loc.get("id")]
+
+        # Find all script tags with menu URLs
+        scripts = soup.find_all("script")
+        script_index = 0
+
+        for script in scripts:
+            if script.string and "todaysmenu" in script.string:
+                # Extract the menu URL from the script
+                match = re.search(r"todaysmenu/([^\"]+\.jpg)", script.string)
+                if match and script_index < len(location_ids):
+                    menu_filename = match.group(1).replace(".jpg", "")
+                    location_id = location_ids[script_index]
+                    location_menu_map[location_id] = menu_filename
+                    script_index += 1
+
+        cls._menu_map_cache = location_menu_map
+        return location_menu_map
+
     def __init__(self, location: str, timestamp: int | None = None):
         self.location = location
         if timestamp is None:
             timestamp = int(time())
-        self.menu_url = f"https://www.craftbeermarket.jp/todaysmenu/dm_{location}.jpg?{timestamp}"
+
+        # Get the correct menu filename for this location
+        menu_map = self._get_menu_map()
+        menu_filename = menu_map.get(location, f"dm_{location}")
+        self.menu_url = f"https://www.craftbeermarket.jp/todaysmenu/{menu_filename}.jpg?{timestamp}"
 
     def _download_image(self) -> Image:
         data = session.get(self.menu_url).content
