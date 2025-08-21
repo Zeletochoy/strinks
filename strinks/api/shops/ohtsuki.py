@@ -1,23 +1,21 @@
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..async_utils import fetch_text
 from . import Shop, ShopBeer
 from .parsing import clean_beer_name, parse_milliliters, parse_price
-
-session = get_retrying_session()
 
 
 class Ohtsuki(Shop):
     short_name = "ohtsuki"
     display_name = "Ohtsuki"
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
         base_url = "https://ohtsuki-saketen.com/beer/index.html"
-        page_soup = BeautifulSoup(session.get(base_url).text, "html.parser")
+        page_soup = BeautifulSoup(await fetch_text(self.session, base_url), "html.parser")
         for table in page_soup("table", class_="product"):
             for row in table("tr"):
                 try:
@@ -47,8 +45,8 @@ class Ohtsuki(Shop):
                         quantity=1,
                         image_url=image_url,
                     )
-                except Exception as e:
-                    print(f"Unexpected exception while parsing page, skipping.\n{e}")
+                except Exception:
+                    self.logger.exception("Error parsing page")
 
     def get_db_entry(self, db: BeerDB) -> DBShop:
         return db.insert_shop(

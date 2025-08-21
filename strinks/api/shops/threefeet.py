@@ -1,19 +1,17 @@
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..async_utils import fetch_json
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 from .parsing import parse_milliliters
-
-session = get_retrying_session()
 
 
 class Threefeet(Shop):
     short_name = "3feet"
     display_name = "Threefeet"
 
-    def _iter_pages(self) -> Iterator[dict]:
+    async def _iter_pages(self) -> AsyncIterator[dict]:
         i = 1
         while True:
             # Removed category filter as it was returning no results
@@ -22,14 +20,15 @@ class Threefeet(Shop):
                 f"products?page={i}&per_page=180&sort_by=created_date&sort_order=desc"
                 "&include=images,media_files,discounts&excluded_fulfillment=dine_in"
             )
-            yield session.get(url).json()
+            yield await fetch_json(self.session, url)
             i += 1
 
-    def _iter_page_beers(self, page_json: dict) -> Iterator[dict]:
+    async def _iter_page_beers(self, page_json: dict) -> AsyncIterator[dict]:
         beers = page_json["data"]
         if not beers:
             raise NoBeersError
-        yield from beers
+        for beer in beers:
+            yield beer
 
     def _parse_beer_page(self, page_json) -> ShopBeer:
         raw_name = page_json["permalink"].lower().replace("-", " ")
@@ -58,16 +57,16 @@ class Threefeet(Shop):
             image_url=image_url,
         )
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
-        for listing_page in self._iter_pages():
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
+        async for listing_page in self._iter_pages():
             try:
-                for beer_json in self._iter_page_beers(listing_page):
+                async for beer_json in self._iter_page_beers(listing_page):
                     try:
                         yield self._parse_beer_page(beer_json)
                     except NotABeerError:
                         continue
-                    except Exception as e:
-                        print(f"Unexpected exception while parsing page, skipping.\n{e}")
+                    except Exception:
+                        self.logger.exception("Error parsing page")
             except NoBeersError:
                 break
 

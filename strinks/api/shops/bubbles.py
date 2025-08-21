@@ -1,17 +1,15 @@
 """BUBBLES (kitakatabbb.com) scraper."""
 
 import re
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..async_utils import fetch_text
 from . import NoBeersError, Shop, ShopBeer
 from .parsing import clean_beer_name, is_beer_set, parse_milliliters, parse_price
-
-session = get_retrying_session()
 
 
 class Bubbles(Shop):
@@ -20,7 +18,7 @@ class Bubbles(Shop):
     short_name = "bubbles"
     display_name = "BUBBLES"
 
-    def _iter_pages(self) -> Iterator[BeautifulSoup]:
+    async def _iter_pages(self) -> AsyncIterator[BeautifulSoup]:
         """Iterate through all pages of beer listings."""
         page_index = 0
 
@@ -29,8 +27,8 @@ class Bubbles(Shop):
             url = f"https://kitakatabbb.com/item-list?pageIndex={page_index}&sortKind=3"
 
             try:
-                response = session.get(url)
-                soup = BeautifulSoup(response.text, "html.parser")
+                response = await fetch_text(self.session, url)
+                soup = BeautifulSoup(response, "html.parser")
 
                 # Check if we have products on this page
                 products = soup.select("li")
@@ -44,10 +42,10 @@ class Bubbles(Shop):
                 page_index += 1
 
             except Exception as e:
-                print(f"Error fetching page {url}: {e}")
+                self.logger.error(f"Error fetching page {url}: {e}")
                 break
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[ShopBeer]:
+    async def _iter_page_beers(self, page_soup: BeautifulSoup) -> AsyncIterator[ShopBeer]:
         """Extract beer info from a page."""
         # Find all list items that contain products
         products = page_soup.select("li")
@@ -146,19 +144,19 @@ class Bubbles(Shop):
                 )
 
             except Exception as e:
-                print(f"Error parsing product: {e}")
+                self.logger.error(f"Error parsing product: {e}")
                 continue
 
         if not found_any:
             raise NoBeersError
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
         """Iterate through all beers on BUBBLES."""
         seen_urls = set()
 
-        for listing_page in self._iter_pages():
+        async for listing_page in self._iter_pages():
             try:
-                for beer in self._iter_page_beers(listing_page):
+                async for beer in self._iter_page_beers(listing_page):
                     # Skip if we've already seen this beer
                     if beer.url in seen_urls:
                         continue

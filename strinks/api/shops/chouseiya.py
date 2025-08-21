@@ -1,34 +1,36 @@
 import re
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..async_utils import fetch_text
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 from .parsing import parse_milliliters, parse_price
-
-session = get_retrying_session()
 
 
 class Chouseiya(Shop):
     short_name = "chouseiya"
     display_name = "Chouseiya"
 
-    def _iter_pages(self) -> Iterator[BeautifulSoup]:
+    async def _iter_pages(self) -> AsyncIterator[BeautifulSoup]:
         i = 1
         while True:
             url = f"https://beer-chouseiya.shop/shopbrand/all_items/page{i}"
-            page = session.get(url).text
+            page = await fetch_text(self.session, url)
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[tuple[BeautifulSoup, str]]:
+    async def _iter_page_beers(self, page_soup: BeautifulSoup) -> AsyncIterator[tuple[BeautifulSoup, str]]:
         empty = True
-        for item in page_soup("div", class_="innerBox"):
-            url = "https://beer-chouseiya.shop" + item.find("a")["href"]
-            page = session.get(url).text
+        items = page_soup.find_all("div", class_="innerBox")
+        for item in items:
+            link = item.find("a")
+            if not link or not link.get("href"):
+                continue
+            url = "https://beer-chouseiya.shop" + link["href"]
+            page = await fetch_text(self.session, url)
             yield BeautifulSoup(page, "html.parser"), url
             empty = False
         if empty:
@@ -38,24 +40,41 @@ class Chouseiya(Shop):
         if page_soup.find("p", class_="soldout") is not None:
             raise NotABeerError
         info = page_soup.find("div", id="itemInfo")
-        title = info.find("h2").get_text().strip().lower()
+        if not info:
+            raise NotABeerError
+        title_elem = info.find("h2")
+        if not title_elem:
+            raise NotABeerError
+        title = title_elem.get_text().strip().lower()
         title_match = re.search(r"【(.*?)(?:\([^)]+\))?/(.*?)(?:\([^)]+\))?】", title)
         if title_match is None:
             raise NotABeerError
         beer_name = title_match.group(1)
         brewery_name = title_match.group(2)
-        price_str = info.find("tr", id="M_usualValue").get_text().strip()
+        price_elem = info.find("tr", id="M_usualValue")
+        if not price_elem:
+            raise NotABeerError
+        price_str = price_elem.get_text().strip()
         # Use parsing utility for price
         price = parse_price(price_str)
         if price is None:
             raise NotABeerError
 
-        desc = page_soup.find("div", class_="detailTxt").get_text().strip()
+        desc_elem = page_soup.find("div", class_="detailTxt")
+        if not desc_elem:
+            raise NotABeerError
+        desc = desc_elem.get_text().strip()
         # Use parsing utility for milliliters
         ml = parse_milliliters(desc)
         if ml is None:
             raise NotABeerError
-        image_href = page_soup.find("div", id="itemImg").find("a")["href"]
+        img_div = page_soup.find("div", id="itemImg")
+        if not img_div:
+            raise NotABeerError
+        img_link = img_div.find("a")
+        if not img_link or not img_link.get("href"):
+            raise NotABeerError
+        image_href = img_link["href"]
         image_match = re.search(r"imageview\('(.*)'\)", image_href)
         if image_match is None:
             raise NotABeerError
@@ -71,16 +90,16 @@ class Chouseiya(Shop):
             image_url=image_url,
         )
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
-        for listing_page in self._iter_pages():
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
+        async for listing_page in self._iter_pages():
             try:
-                for beer_page, url in self._iter_page_beers(listing_page):
+                async for beer_page, url in self._iter_page_beers(listing_page):
                     try:
                         yield self._parse_beer_page(beer_page, url)
                     except NotABeerError:
                         continue
-                    except Exception as e:
-                        print(f"Unexpected exception while parsing page, skipping.\n{e}")
+                    except Exception:
+                        self.logger.exception("Error parsing page")
             except NoBeersError:
                 break
 

@@ -3,6 +3,7 @@
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
+import aiohttp
 import pytest
 
 from strinks.api.shops import ShopBeer
@@ -85,8 +86,9 @@ class TestUntappdAPI:
     @pytest.fixture
     def mock_session(self):
         """Mock the HTTP session."""
-        with patch("strinks.api.untappd.api.session") as mock:
-            yield mock
+        # No longer patching a global session since we use aiohttp
+        mock = Mock()
+        yield mock
 
     @pytest.fixture
     def mock_db(self):
@@ -97,67 +99,82 @@ class TestUntappdAPI:
             mock.return_value = db
             yield db
 
-    def test_untappd_api_initialization(self, mock_db):
+    async def test_untappd_api_initialization(self, mock_db):
         """Test UntappdAPI initialization."""
-        # Without auth token (app credentials)
-        api1 = UntappdAPI()
-        assert api1.auth_token is None
+        async with aiohttp.ClientSession() as session:
+            # Without auth token (app credentials)
+            api1 = UntappdAPI(session)
+            assert api1.auth_token is None
 
-        # With auth token
-        api2 = UntappdAPI(auth_token="test_token")
-        assert api2.auth_token == "test_token"
+            # With auth token
+            api2 = UntappdAPI(session, auth_token="test_token")
+            assert api2.auth_token == "test_token"
 
-    def test_rate_limiting(self, mock_session, mock_db):
+    @pytest.mark.asyncio
+    async def test_rate_limiting(self, mock_session, mock_db):
         """Test that rate limiting is handled."""
-        api = UntappdAPI()
+        api = UntappdAPI(session=mock_session)
 
-        # Mock a rate limit response
+        # Mock a rate limit response with async context manager
         mock_response = Mock()
-        mock_response.status_code = 429
-        mock_session.get.return_value = mock_response
+        mock_response.status = 429
+
+        # Create async context manager mock
+        async def async_enter(self):
+            return mock_response
+
+        async def async_exit(self, exc_type, exc_val, exc_tb):
+            return None
+
+        mock_get = Mock()
+        mock_get.__aenter__ = async_enter
+        mock_get.__aexit__ = async_exit
+        mock_session.get.return_value = mock_get
 
         with pytest.raises(RateLimitError):
-            api.api_request("/test")
+            await api.api_request("/test")
 
-    def test_get_beer_from_db_with_cache(self, mock_db):
+    async def test_get_beer_from_db_with_cache(self, mock_db):
         """Test getting beer from database when cached."""
-        api = UntappdAPI()
+        async with aiohttp.ClientSession() as session:
+            api = UntappdAPI(session)
 
-        # Mock a recent beer
-        mock_beer = Mock()
-        mock_beer.beer_id = 123
-        mock_beer.updated_at = now_jst() - timedelta(hours=1)
-        mock_beer.name = "Test IPA"
-        mock_beer.brewery_name = "Test Brewery"
-        mock_beer.brewery_id = 456
-        mock_beer.brewery_country = "United States"
-        mock_beer.style = "IPA"
-        mock_beer.abv = "6.5"
-        mock_beer.ibu = "65"
-        mock_beer.rating = "4.2"
-        mock_beer.image_url = "https://example.com/beer.jpg"
-        mock_beer.description = "A hoppy IPA"
-        mock_beer.tags = []
+            # Mock a recent beer
+            mock_beer = Mock()
+            mock_beer.beer_id = 123
+            mock_beer.updated_at = now_jst() - timedelta(hours=1)
+            mock_beer.name = "Test IPA"
+            mock_beer.brewery_name = "Test Brewery"
+            mock_beer.brewery_id = 456
+            mock_beer.brewery_country = "United States"
+            mock_beer.style = "IPA"
+            mock_beer.abv = "6.5"
+            mock_beer.ibu = "65"
+            mock_beer.rating = "4.2"
+            mock_beer.image_url = "https://example.com/beer.jpg"
+            mock_beer.description = "A hoppy IPA"
+            mock_beer.tags = []
 
-        mock_db.get_beer.return_value = mock_beer
+            mock_db.get_beer.return_value = mock_beer
 
-        result = api._get_beer_from_db(123)
-        assert result is not None
-        assert result.beer_id == 123
-        assert result.name == "Test IPA"
+            result = api._get_beer_from_db(123)
+            assert result is not None
+            assert result.beer_id == 123
+            assert result.name == "Test IPA"
 
-    def test_get_beer_from_db_expired(self, mock_db):
+    async def test_get_beer_from_db_expired(self, mock_db):
         """Test getting beer from database when cache expired."""
-        api = UntappdAPI()
+        async with aiohttp.ClientSession() as session:
+            api = UntappdAPI(session)
 
-        # Mock an old beer
-        mock_beer = Mock()
-        mock_beer.updated_at = now_jst() - timedelta(days=35)  # Older than BEER_CACHE_TIME
+            # Mock an old beer
+            mock_beer = Mock()
+            mock_beer.updated_at = now_jst() - timedelta(days=35)  # Older than BEER_CACHE_TIME
 
-        mock_db.get_beer.return_value = mock_beer
+            mock_db.get_beer.return_value = mock_beer
 
-        result = api._get_beer_from_db(123)
-        assert result is None  # Should return None for expired cache
+            result = api._get_beer_from_db(123)
+            assert result is None  # Should return None for expired cache
 
 
 class TestUntappdWeb:
@@ -195,52 +212,64 @@ class TestUntappdIntegration:
             mock_db.return_value = db
             yield
 
-    def test_untappd_initialization(self, mock_backends):
+    async def test_untappd_initialization(self, mock_backends):
         """Test Untappd class initialization."""
-        untappd = UntappdClient()
+        async with aiohttp.ClientSession() as session:
+            untappd = UntappdClient(session)
 
-        assert untappd.backend_idx == 0
-        assert len(untappd.backends) > 0
-        assert untappd.cache is not None
+            assert untappd.backend_idx == 0
+            assert len(untappd.backends) > 0
+            assert untappd.cache is not None
 
-    def test_backend_switching(self, mock_backends):
+    async def test_backend_switching(self, mock_backends):
         """Test switching between backends."""
-        untappd = UntappdClient()
+        async with aiohttp.ClientSession() as session:
+            untappd = UntappdClient(session)
 
-        untappd.next_backend()
-        assert untappd.backend_idx == 1 or untappd.backend_idx == 0  # Depends on number of backends
+            # next_backend is now async
+            await untappd.next_backend()
+            assert untappd.backend_idx == 1 or untappd.backend_idx == 0  # Depends on number of backends
 
-    def test_try_find_beer_with_shop_beer(self, mock_backends):
+    async def test_try_find_beer_with_shop_beer(self, mock_backends):
         """Test finding beer with ShopBeer input."""
-        untappd = UntappdClient()
+        async with aiohttp.ClientSession() as session:
+            untappd = UntappdClient(session)
 
-        # Mock the cache to return MISS (not cached)
-        mock_cache = Mock()
-        mock_cache.get.return_value = (None, CacheStatus.MISS)
-        untappd.cache = mock_cache
+            # Mock the cache to return MISS (not cached)
+            mock_cache = Mock()
+            mock_cache.get.return_value = (None, CacheStatus.MISS)
+            untappd.cache = mock_cache
 
-        # Mock the current backend
-        mock_backend = Mock()
-        mock_result = UntappdBeerResult(
-            beer_id=456,
-            image_url="https://example.com/beer.jpg",
-            name="Test Beer",
-            brewery="Test Brewery",
-            brewery_id=789,
-            brewery_country="United States",
-            style="Lager",
-            abv=5.0,
-            ibu=30,
-            rating=3.8,
-        )
-        mock_backend.try_find_beer.return_value = mock_result
-        untappd.backends = [mock_backend]
-        untappd.backend_idx = 0
+            # Mock the current backend
+            mock_backend = Mock()
+            mock_result = UntappdBeerResult(
+                beer_id=456,
+                image_url="https://example.com/beer.jpg",
+                name="Test Beer",
+                brewery="Test Brewery",
+                brewery_id=789,
+                brewery_country="United States",
+                style="Lager",
+                abv=5.0,
+                ibu=30,
+                rating=3.8,
+            )
 
-        # Create a ShopBeer
-        shop_beer = ShopBeer(raw_name="Test Beer", url="https://shop.com/beer", milliliters=350, price=500, quantity=1)
+            # Mock async try_find_beer method
+            async def mock_try_find_beer(query):
+                return mock_result
 
-        result = untappd.try_find_beer(shop_beer)
-        assert result is not None
-        assert result[0].beer_id == 456
-        assert result[1] == "test beer"  # The query used
+            mock_backend.try_find_beer = mock_try_find_beer
+            untappd.backends = [mock_backend]
+            untappd.backend_idx = 0
+
+            # Create a ShopBeer
+            shop_beer = ShopBeer(
+                raw_name="Test Beer", url="https://shop.com/beer", milliliters=350, price=500, quantity=1
+            )
+
+            # try_find_beer is now async
+            result = await untappd.try_find_beer(shop_beer)
+            assert result is not None
+            assert result[0].beer_id == 456
+            assert result[1] == "test beer"  # The query used

@@ -1,6 +1,9 @@
-import time
+import asyncio
+import logging
 from collections.abc import Iterator, Sequence
 from datetime import datetime, timedelta
+
+import aiohttp
 
 from ...db import get_db
 from ..shops import ShopBeer
@@ -11,24 +14,31 @@ from .cache import CacheStatus, UntappdSQLiteCache
 from .structs import RateLimitError, UntappdBeerResult, UntappdBreweryResult, UserRating
 from .web import UntappdWeb
 
+logger = logging.getLogger("untappd")
+
 MIN_SECS_BETWEEN_RESTARTS = 300  # 5min
 BEER_CACHE_TIME = timedelta(days=30)
 
 
 class UntappdClient:
-    def __init__(self, *backends: UntappdAPI | UntappdWeb):
+    def __init__(self, session: aiohttp.ClientSession, *backends: UntappdAPI | UntappdWeb):
+        self.session = session
         self.db = get_db()
         self.cache = UntappdSQLiteCache(self.db, cache_duration=BEER_CACHE_TIME)
         self.init_backends(backends)
 
     def init_backends(self, backends: Sequence[UntappdAPI | UntappdWeb]):
         self.backends = backends or [
-            *[UntappdAPI(auth_token=token) for token in self.db.get_access_tokens(is_app=True)],  # App user tokens
-            UntappdAPI(),  # Strinks app credentials
-            *[UntappdAPI(auth_token=token) for token in self.db.get_access_tokens(is_app=False)],  # User tokens
+            *[
+                UntappdAPI(self.session, auth_token=token) for token in self.db.get_access_tokens(is_app=True)
+            ],  # App user tokens
+            UntappdAPI(self.session),  # Strinks app credentials
+            *[
+                UntappdAPI(self.session, auth_token=token) for token in self.db.get_access_tokens(is_app=False)
+            ],  # User tokens
             UntappdWeb(),  # Web scraper
         ]
-        print(f"Untappd backends: {self.backends}")
+        logger.info(f"Untappd backends: {self.backends}")
         self.backend_idx = 0
         self.last_time_at_first = now_jst()
 
@@ -36,27 +46,27 @@ class UntappdClient:
     def current_backend(self) -> UntappdAPI | UntappdWeb:
         return self.backends[self.backend_idx]
 
-    def next_backend(self, index: int | None = None) -> None:
+    async def next_backend(self, index: int | None = None) -> None:
         self.backend_idx = (self.backend_idx + 1) % len(self.backends)
-        print(f"Switching Untappd backend to {self.current_backend}")
+        logger.debug(f"Switching Untappd backend to {self.current_backend}")
         if self.backend_idx == 0:
             elapsed = (now_jst() - self.last_time_at_first).total_seconds()
             if elapsed < MIN_SECS_BETWEEN_RESTARTS:
-                print("Went through all backends too fast, waiting a bit...")
-                time.sleep(MIN_SECS_BETWEEN_RESTARTS - elapsed)
+                logger.warning("Went through all backends too fast, waiting a bit...")
+                await asyncio.sleep(MIN_SECS_BETWEEN_RESTARTS - elapsed)
             self.last_time_at_first = now_jst()
 
-    def _query_beer(self, query: str) -> UntappdBeerResult | None:
+    async def _query_beer(self, query: str) -> UntappdBeerResult | None:
         if (now_jst() - self.last_time_at_first).total_seconds() > 3600:  # rate limit resets every hour
             self.backend_idx = 0
             self.last_time_at_first = now_jst()
         while True:
             try:
-                return self.current_backend.try_find_beer(query)
+                return await self.current_backend.try_find_beer(query)
             except RateLimitError:
-                self.next_backend()
+                await self.next_backend()
 
-    def try_find_beer(self, beer: ShopBeer) -> tuple[UntappdBeerResult, str] | None:
+    async def try_find_beer(self, beer: ShopBeer) -> tuple[UntappdBeerResult, str] | None:
         """Returns result and used query if found or None otherwise"""
         if (now_jst() - self.last_time_at_first).total_seconds() > 3600:  # rate limit resets every hour
             self.backend_idx = 0
@@ -74,20 +84,20 @@ class UntappdClient:
                     # Get full beer details from API
                     while True:
                         try:
-                            return self.current_backend.get_beer_from_id(beer_id), query
+                            return await self.current_backend.get_beer_from_id(beer_id), query
                         except RateLimitError:
-                            self.next_backend()
+                            await self.next_backend()
 
                 case CacheStatus.MISS | CacheStatus.EXPIRED:
                     # Not in cache or expired, query API
-                    res = self._query_beer(query)
+                    res = await self._query_beer(query)
                     # Cache the result (beer_id can be None if not found)
                     self.cache.set(query, res.beer_id if res else None)
                     if res is not None:
                         return res, query
         return None
 
-    def search_breweries(self, query: str) -> list[UntappdBreweryResult]:
+    async def search_breweries(self, query: str) -> list[UntappdBreweryResult]:
         """Search for breweries with automatic backend rotation on rate limit."""
         if (now_jst() - self.last_time_at_first).total_seconds() > 3600:  # rate limit resets every hour
             self.backend_idx = 0
@@ -97,14 +107,14 @@ class UntappdClient:
             try:
                 # Only UntappdAPI supports brewery search, not UntappdWeb
                 if isinstance(self.current_backend, UntappdAPI):
-                    return self.current_backend.search_breweries(query)
+                    return await self.current_backend.search_breweries(query)
                 # Skip web backend for brewery search
-                self.next_backend()
+                await self.next_backend()
                 if self.backend_idx == 0:
                     # Went through all backends, none support brewery search
                     return []
             except RateLimitError:
-                self.next_backend()
+                await self.next_backend()
 
     def iter_had_beers(
         self, user_id: int | None = None, from_time: datetime | None = None

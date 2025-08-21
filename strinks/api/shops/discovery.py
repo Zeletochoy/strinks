@@ -8,6 +8,8 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import aiohttp
+
 if TYPE_CHECKING:
     from . import Shop
 
@@ -49,34 +51,40 @@ def discover_shop_classes(package_path: Path | None = None) -> dict[str, type["S
 
         except Exception as e:
             # Log but don't fail if a module can't be imported
-            print(f"Warning: Could not import shop module {module_info.name}: {e}")
+            import logging
+
+            logging.getLogger(__name__).warning(f"Could not import shop module {module_info.name}: {e}")
 
     return shop_classes
 
 
-def get_shop_map_dynamic() -> dict[str, Callable[[], "Shop"]]:
-    """Get shop map using dynamic discovery.
+async def get_shop_map_dynamic(session: aiohttp.ClientSession) -> dict[str, Callable[[aiohttp.ClientSession], "Shop"]]:
+    """Get shop map using dynamic discovery with location expansion.
+
+    Args:
+        session: aiohttp session for async operations
 
     Returns:
         Dictionary mapping shop names to callables that create shop instances.
     """
     shop_classes = discover_shop_classes()
-    shop_map: dict[str, Callable[[], Shop]] = {}
+    shop_map: dict[str, Callable[[aiohttp.ClientSession], Shop]] = {}
 
     for short_name, shop_class in shop_classes.items():
         # Check if the shop class has a get_locations method for multiple locations
         if hasattr(shop_class, "get_locations") and callable(shop_class.get_locations):
             try:
-                locations = shop_class.get_locations()
+                # Get locations using the async method
+                locations = await shop_class.get_locations(session)
                 # Add an entry for each location
                 for location in locations:
-                    # Assume location is passed as a parameter to the constructor
-                    # Don't double-prefix if location already starts with shop name
-                    location_key = location if location.startswith(f"{short_name}-") else f"{short_name}-{location}"
-                    shop_map[location_key] = partial(shop_class, location=location)  # type: ignore[call-arg]
+                    location_key = f"{short_name}-{location}"
+                    shop_map[location_key] = partial(shop_class, location=location)
             except Exception as e:
                 # If get_locations fails, just add the class normally
-                print(f"Warning: Could not get locations for {short_name}: {e}")
+                import logging
+
+                logging.getLogger(__name__).warning(f"Could not get locations for {short_name}: {e}")
                 shop_map[short_name] = shop_class
         else:
             # Regular shop without multiple locations

@@ -1,19 +1,19 @@
 import logging
 import re
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from csv import DictReader
 from io import BytesIO
 from time import time
 
+import aiohttp
 from bs4 import BeautifulSoup
 from openai import BadRequestError
 from PIL import Image
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
+from ..async_utils import fetch_bytes
 from ..chatgpt import ChatGPTConversation
-from ..ocr import ocr_image
-from ..utils import get_retrying_session
 from . import Shop, ShopBeer
 
 LIST_URL = "https://www.craftbeermarket.jp/todays-beer-list"
@@ -52,27 +52,26 @@ Don't add any extra formatting, just output a valid CSV file.
 
 
 logger = logging.getLogger(__name__)
-session = get_retrying_session()
 
 
 class CBM(Shop):
     short_name = "cbm"
-    display_name = "Craft Beer Market"
     _menu_map_cache: dict[str, str] | None = None
 
     @classmethod
-    def get_locations(cls) -> list[str]:
-        html = session.get(LIST_URL).content
+    async def get_locations(cls, session: aiohttp.ClientSession) -> list[str]:
+        html = await fetch_bytes(session, LIST_URL)
         soup = BeautifulSoup(html, "html.parser")
-        return [location for div in soup("div", class_="half") if (location := div["id"]) not in UNSUPPORTED_LOCATIONS]
+        divs = soup.find_all("div", class_="half")
+        return [div["id"] for div in divs if div.get("id") and div["id"] not in UNSUPPORTED_LOCATIONS]
 
     @classmethod
-    def _get_menu_map(cls) -> dict[str, str]:
+    async def _get_menu_map(cls, session: aiohttp.ClientSession) -> dict[str, str]:
         """Get mapping of location IDs to menu filenames, cached."""
         if cls._menu_map_cache is not None:
             return cls._menu_map_cache
 
-        html = session.get(LIST_URL).content
+        html = await fetch_bytes(session, LIST_URL)
         soup = BeautifulSoup(html, "html.parser")
 
         # Map location IDs to their menu filenames
@@ -99,26 +98,30 @@ class CBM(Shop):
         cls._menu_map_cache = location_menu_map
         return location_menu_map
 
-    def __init__(self, location: str, timestamp: int | None = None):
+    def __init__(self, session: aiohttp.ClientSession, location: str, timestamp: int | None = None):
+        super().__init__(session)
         self.location = location
-        if timestamp is None:
-            timestamp = int(time())
+        self.timestamp = timestamp if timestamp is not None else int(time())
+        self.display_name = f"Craft Beer Market {location}"
 
-        # Get the correct menu filename for this location
-        menu_map = self._get_menu_map()
-        menu_filename = menu_map.get(location, f"dm_{location}")
-        self.menu_url = f"https://www.craftbeermarket.jp/todaysmenu/{menu_filename}.jpg?{timestamp}"
-
-    def _download_image(self) -> Image:
-        data = session.get(self.menu_url).content
+    async def _download_image(self) -> Image:
+        data = await fetch_bytes(self.session, self.menu_url)
         return Image.open(BytesIO(data))
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
+        # Get the menu URL with correct filename
+        menu_map = await self._get_menu_map(self.session)
+        menu_filename = menu_map.get(self.location, f"dm_{self.location}")
+        self.menu_url = f"https://www.craftbeermarket.jp/todaysmenu/{menu_filename}.jpg?{self.timestamp}"
+
         try:
             gpt = ChatGPTConversation(SYSTEM_PROMPT)
-            gpt.send(text="Here's today's menu:", image_url=self.menu_url)
-            ocr_output = ocr_image(self._download_image())
-            gpt_csv = gpt.send(
+            await gpt.send(text="Here's today's menu:", image_url=self.menu_url)
+            image = await self._download_image()
+            from ..ocr import ocr_image
+
+            ocr_output = await ocr_image(image)
+            gpt_csv = await gpt.send(
                 f"This is the OCR transcript, use it to correct the names but keep all the beers:\n{ocr_output}"
             )
         except BadRequestError:
@@ -127,21 +130,28 @@ class CBM(Shop):
         gpt_csv = gpt_csv.strip("```").lstrip("csv").strip()  # common issue, wrap in ```csv
         reader = DictReader(gpt_csv.splitlines())
         if reader.fieldnames is None or set(reader.fieldnames) != set(CSV_HEADER):
-            logger.error(f"Invalid CSV header from ChatGPT: {reader.fieldnames}")
+            logger.error("Invalid CSV header from ChatGPT: %s", reader.fieldnames)
             return
         for beer in reader:
-            beer_name = beer["beer"]
-            brewery_name = beer["brewery"]
-            yield ShopBeer(
-                raw_name=f"{brewery_name} {beer_name}",
-                url=self.menu_url,
-                brewery_name=brewery_name,
-                beer_name=beer_name,
-                milliliters=int(beer["size"]),
-                price=int(beer["price"]),
-                quantity=1,
-                image_url=self.menu_url,
-            )
+            try:
+                beer_name = beer["beer"]
+                brewery_name = beer["brewery"]
+                # Skip if size or price can't be parsed as int
+                size = int(beer["size"])
+                price = int(beer["price"])
+                yield ShopBeer(
+                    raw_name=f"{brewery_name} {beer_name}",
+                    url=self.menu_url,
+                    brewery_name=brewery_name,
+                    beer_name=beer_name,
+                    milliliters=size,
+                    price=price,
+                    quantity=1,
+                    image_url=self.menu_url,
+                )
+            except (ValueError, KeyError) as e:
+                logger.warning(f"Skipping invalid beer data: {beer} - {e}")
+                continue
 
     def get_db_entry(self, db: BeerDB) -> DBShop:
         image = "https://www.craftbeermarket.jp/wp2/wp-content/themes/cbm/images/common/logo_{self.location}.png"

@@ -1,47 +1,52 @@
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..async_utils import fetch_text
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 from .parsing import clean_beer_name, parse_milliliters, parse_price
-
-session = get_retrying_session()
 
 
 class Goodbeer(Shop):
     short_name = "goodbeer"
     display_name = "Goodbeer"
 
-    def _iter_pages(self) -> Iterator[BeautifulSoup]:
+    async def _iter_pages(self) -> AsyncIterator[BeautifulSoup]:
         page_num = 1
         while True:
             url = f"https://goodbeer.jp/shop/shopbrand.html?search=&prize1=&page={page_num}"
-            page = session.get(url).text
+            page = await fetch_text(self.session, url)
             soup = BeautifulSoup(page, "html.parser")
             if soup.find("li", class_="next") is None:
                 break
             yield soup
             page_num += 1
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[tuple[BeautifulSoup, str]]:
+    async def _iter_page_beers(self, page_soup: BeautifulSoup) -> AsyncIterator[tuple[BeautifulSoup, str]]:
         has_beers = False
-        for item in page_soup("dl", class_="search-item"):
+        for item in page_soup.find_all("dl", class_="search-item"):
             has_beers = True
             url = "https://goodbeer.jp/" + item.find("a")["href"]
-            page = session.get(url).text
+            page = await fetch_text(self.session, url)
             yield BeautifulSoup(page, "html.parser"), url
         if not has_beers:
             raise NoBeersError
 
     def _parse_beer_page(self, page_soup, url) -> ShopBeer:
-        image = page_soup.find(id="photoL").find("img")
+        photo_div = page_soup.find(id="photoL")
+        if not photo_div:
+            raise NotABeerError
+        image = photo_div.find("img")
+        if not image:
+            raise NotABeerError
         image_url = image["src"]
         title = image["alt"]
         detail = page_soup.find(id="product-detail")
-        for link in detail("a"):
+        if not detail:
+            raise NotABeerError
+        for link in detail.find_all("a"):
             if "shopbrand" in link.get("href"):
                 jp_brewery = link.get_text().strip().split(" ", 1)[0]
                 break
@@ -58,8 +63,10 @@ class Goodbeer(Shop):
             brewery_name, beer_name = name_parts
         raw_name = raw_name.strip().lower()
         table = detail.find(id="item-table")
+        if not table:
+            raise NotABeerError
         ml = None
-        for row in table("dl"):
+        for row in table.find_all("dl"):
             try:
                 row_name = row.find("dt").get_text().strip()
                 row_value = row.find("dd").get_text().strip()
@@ -88,16 +95,16 @@ class Goodbeer(Shop):
             image_url=image_url,
         )
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
-        for listing_page in self._iter_pages():
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
+        async for listing_page in self._iter_pages():
             try:
-                for beer_page, url in self._iter_page_beers(listing_page):
+                async for beer_page, url in self._iter_page_beers(listing_page):
                     try:
                         yield self._parse_beer_page(beer_page, url)
                     except NotABeerError:
                         continue
-                    except Exception as e:
-                        print(f"Unexpected exception while parsing page, skipping.\n{e}")
+                    except Exception:
+                        self.logger.exception(f"Error parsing {url}")
             except NoBeersError:
                 break
 

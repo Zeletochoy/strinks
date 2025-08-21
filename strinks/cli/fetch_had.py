@@ -1,5 +1,7 @@
+import asyncio
 from typing import NamedTuple
 
+import aiohttp
 import click
 from sqlalchemy.exc import IntegrityError
 
@@ -16,8 +18,8 @@ class FetchSummary(NamedTuple):
         return f"Fetched {self.new_ratings} new rating(s) and added {self.new_beers} new beer(s)."
 
 
-def fetch_user_had(user: User, db: BeerDB, verbose: bool) -> FetchSummary:
-    untappd = UntappdClient(UntappdAPI(user.access_token))
+async def fetch_user_had(user: User, db: BeerDB, session: aiohttp.ClientSession, verbose: bool) -> FetchSummary:
+    untappd = UntappdClient(session, UntappdAPI(session, auth_token=user.access_token))
     latest_rating = db.get_latest_rating(user.id)
     from_time = latest_rating.updated_at if latest_rating is not None else None
     new_beers = new_ratings = 0
@@ -75,6 +77,12 @@ def fetch_user_had(user: User, db: BeerDB, verbose: bool) -> FetchSummary:
 @click.option("-u", "--user-id", type=int, default=None, help="User ID, default: all")
 @click.option("-v", "--verbose", is_flag=True, help="Display debug info")
 def cli(database: click.Path | None, user_id: int | None, verbose: bool):
+    """Fetch all users' had beers from Untappd"""
+    asyncio.run(_fetch_all(database, user_id, verbose))
+
+
+async def _fetch_all(database: click.Path | None, user_id: int | None, verbose: bool):
+    """Async function to fetch all users' beers"""
     db = get_db(str(database) if database is not None else None)
 
     if user_id is None:
@@ -88,16 +96,17 @@ def cli(database: click.Path | None, user_id: int | None, verbose: bool):
     summary = {}
 
     try:
-        for user in users:
-            print(f"Fetching beers had by {user.user_name}...")
-            try:
-                user_summary = fetch_user_had(user, db, verbose)
-                summary[user.user_name] = str(user_summary)
-            except Exception:
-                from traceback import format_exc
+        async with aiohttp.ClientSession() as session:
+            for user in users:
+                print(f"Fetching beers had by {user.user_name}...")
+                try:
+                    user_summary = await fetch_user_had(user, db, session, verbose)
+                    summary[user.user_name] = str(user_summary)
+                except Exception:
+                    from traceback import format_exc
 
-                formatted = f"Error: {format_exc()}"
-                summary[user.user_name] = formatted
+                    formatted = f"Error: {format_exc()}"
+                    summary[user.user_name] = formatted
                 print(formatted)
     finally:
         print("=" * 10, "Summary", "=" * 10)

@@ -1,15 +1,13 @@
 """Craft Beer Online (beeronline.jp) scraper."""
 
 import re
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..async_utils import fetch_json
 from . import NotABeerError, Shop, ShopBeer
 from .parsing import clean_beer_name, is_beer_set, parse_milliliters
-
-session = get_retrying_session()
 
 
 class CraftBeerOnline(Shop):
@@ -18,7 +16,7 @@ class CraftBeerOnline(Shop):
     short_name = "craftbeeronline"
     display_name = "Craft Beer Online"
 
-    def _fetch_products(self, page: int) -> dict:
+    async def _fetch_products(self, page: int) -> dict:
         """Fetch products from the API."""
         # Using the API endpoint discovered via dev tools
         # Minimal params needed for the API to work
@@ -32,8 +30,7 @@ class CraftBeerOnline(Shop):
             f"&handle=all"
         )
 
-        response = session.get(url)
-        result = response.json()
+        result = await fetch_json(self.session, url)
         assert isinstance(result, dict)
         return result
 
@@ -133,14 +130,14 @@ class CraftBeerOnline(Shop):
             image_url=image_url,
         )
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
         """Iterate through all beers on Craft Beer Online."""
         page = 1
         seen_handles = set()
 
         while True:
             try:
-                data = self._fetch_products(page)
+                data = await self._fetch_products(page)
 
                 # Check if we have products
                 products = data.get("products", [])
@@ -158,7 +155,7 @@ class CraftBeerOnline(Shop):
                     except NotABeerError:
                         continue
                     except Exception as e:
-                        print(f"Error parsing product: {e}")
+                        self.logger.error(f"Error parsing product: {e}")
                         continue
 
                 # Check if we've reached the last page
@@ -169,7 +166,7 @@ class CraftBeerOnline(Shop):
                 page += 1
 
             except Exception as e:
-                print(f"Error fetching page {page}: {e}")
+                self.logger.error(f"Error fetching page {page}: {e}")
                 break
 
     def get_db_entry(self, db: BeerDB) -> DBShop:

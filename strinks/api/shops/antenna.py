@@ -1,11 +1,11 @@
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from urllib.parse import urlparse, urlunparse
 
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..async_utils import fetch_json, fetch_text
 from . import NoBeersError, NotABeerError, Shop, ShopBeer
 from .parsing import (
     clean_beer_name,
@@ -13,8 +13,6 @@ from .parsing import (
     is_beer_set,
     parse_milliliters,
 )
-
-session = get_retrying_session()
 
 
 def _get_json_url(beer_url: str) -> str:
@@ -27,20 +25,24 @@ class AntennaAmerica(Shop):
     short_name = "antenna"
     display_name = "Antenna America"
 
-    def _iter_pages(self) -> Iterator[BeautifulSoup]:
+    async def _iter_pages(self) -> AsyncIterator[BeautifulSoup]:
         i = 1
         while True:
             url = f"https://www.antenna-america.com/collections/beer?page={i}&sort_by=created-descending"
-            page = session.get(url).text
+            page = await fetch_text(self.session, url)
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[dict]:
+    async def _iter_page_beers(self, page_soup: BeautifulSoup) -> AsyncIterator[dict]:
         empty = True
-        for item_li in page_soup("li", class_="grid__item"):
-            url = "https://www.antenna-america.com" + item_li.find("a")["href"]
+        items = page_soup.find_all("li", class_="grid__item")
+        for item_li in items:
+            link = item_li.find("a")
+            if not link or not link.get("href"):
+                continue
+            url = "https://www.antenna-america.com" + link["href"]
             url = _get_json_url(url)
-            yield session.get(url).json()
+            yield await fetch_json(self.session, url)
             empty = False
         if empty:
             raise NoBeersError
@@ -81,16 +83,16 @@ class AntennaAmerica(Shop):
             image_url=image_url,
         )
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
-        for listing_page in self._iter_pages():
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
+        async for listing_page in self._iter_pages():
             try:
-                for beer_item in self._iter_page_beers(listing_page):
+                async for beer_item in self._iter_page_beers(listing_page):
                     try:
                         yield self._parse_beer_page(beer_item)
                     except NotABeerError:
                         continue
-                    except Exception as e:
-                        print(f"Unexpected exception while parsing page, skipping.\n{e}")
+                    except Exception:
+                        self.logger.exception("Error parsing page")
             except NoBeersError:
                 break
 

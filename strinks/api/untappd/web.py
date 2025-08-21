@@ -1,6 +1,7 @@
 import logging
 import time
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from typing import Any
 
@@ -10,6 +11,7 @@ from sqlmodel import select
 
 from ...db import get_db
 from ...db.tables import Brewery
+from ..async_utils import fetch_cloudflare_protected
 from ..utils import JST, now_jst
 from .rank import best_match
 from .structs import FlavorTag, RateLimitError, UntappdBeerResult
@@ -21,12 +23,15 @@ REQ_COOLDOWN = 5
 BEER_CACHE_TIME = timedelta(days=30)
 session = cloudscraper.create_scraper(allow_brotli=False)
 
+# Thread pool for running cloudscraper requests
+_web_executor = ThreadPoolExecutor(max_workers=4)
+
 
 class UntappdWeb:
     # Cache of Untappd country names
     _countries_cache: list[str] | None = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.last_request_timestamps: deque[float] = deque(maxlen=MAX_REQ_PER_HOUR)
         self.headers = {
             "Referer": "https://untappd.com/home",
@@ -181,13 +186,15 @@ class UntappdWeb:
                         # Save the brewery to database for future use
                         try:
                             with self.db.commit_or_rollback():
+                                city = result.get("brewery_city")
+                                state = result.get("brewery_state")
                                 self.db.insert_brewery(
                                     brewery_id=brewery_id,
                                     image_url=image_url,  # We have this from og:image
                                     name=brewery_name,
                                     country=country_found,
-                                    city=result.get("brewery_city"),
-                                    state=result.get("brewery_state"),
+                                    city=city if isinstance(city, str) else None,
+                                    state=state if isinstance(state, str) else None,
                                     check_existence=True,
                                 )
                                 logger.debug(f"Saved brewery {brewery_name} (ID: {brewery_id}) to database")
@@ -272,18 +279,16 @@ class UntappdWeb:
             rating=float(rating_str),
         )
 
-    def try_find_beer(self, query: str) -> UntappdBeerResult | None:
+    async def try_find_beer(self, query: str) -> UntappdBeerResult | None:
         self.rate_limit()
         try:
             logger.debug(f"Untappd query for '{query}'")
-            res = session.get(
+            html = await fetch_cloudflare_protected(
                 "https://untappd.com/search",
                 params={"q": query},
                 headers=self.headers,
             )
-            if res.status_code >= 300:
-                raise RateLimitError()
-            soup = BeautifulSoup(res.text, "html.parser")
+            soup = BeautifulSoup(html, "html.parser")
             items = soup("div", class_="beer-item")
             if not items:
                 return None
@@ -305,16 +310,14 @@ class UntappdWeb:
             raise RateLimitError()
         return best_beer
 
-    def get_beer_from_id(self, beer_id: int) -> UntappdBeerResult:
-        return self._get_beer_from_db(beer_id) or self._query_beer(beer_id)
+    async def get_beer_from_id(self, beer_id: int) -> UntappdBeerResult:
+        return self._get_beer_from_db(beer_id) or await self._query_beer(beer_id)
 
-    def _query_beer(self, beer_id: int) -> UntappdBeerResult:
+    async def _query_beer(self, beer_id: int) -> UntappdBeerResult:
         self.rate_limit()
         try:
-            res = session.get(f"https://untappd.com/beer/{beer_id}", headers=self.headers)
-            if res.status_code >= 300:
-                raise RateLimitError()
-            soup = BeautifulSoup(res.text, "html.parser")
+            html = await fetch_cloudflare_protected(f"https://untappd.com/beer/{beer_id}", headers=self.headers)
+            soup = BeautifulSoup(html, "html.parser")
             item = soup.find("div", class_="content")
             if not isinstance(item, Tag):
                 raise KeyError(f"Beer with ID {beer_id} not found on untappd")

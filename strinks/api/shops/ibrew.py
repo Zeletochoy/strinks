@@ -1,15 +1,15 @@
 import re
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from datetime import timedelta
 
+import aiohttp
 from bs4 import BeautifulSoup, Tag
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session, now_jst
+from ..async_utils import fetch_json, fetch_text
+from ..utils import now_jst
 from . import Shop, ShopBeer
-
-session = get_retrying_session()
 
 
 class IBrew(Shop):
@@ -17,12 +17,12 @@ class IBrew(Shop):
     display_name = "IBrew"
 
     @classmethod
-    def get_locations(cls) -> list[str]:
+    async def get_locations(cls, session: aiohttp.ClientSession) -> list[str]:
         """Get all IBrew locations for autodiscovery by scraping the homepage."""
         locations = []
         try:
-            response = session.get("https://craftbeerbar-ibrew.com/")
-            soup = BeautifulSoup(response.text, "html.parser")
+            response = await fetch_text(session, "https://craftbeerbar-ibrew.com/")
+            soup = BeautifulSoup(response, "html.parser")
 
             # Find all tap-blog-wrapper divs that contain location info
             wrappers = soup.find_all("div", class_="tap-blog-wrapper")
@@ -40,16 +40,19 @@ class IBrew(Shop):
 
             return locations
         except Exception as e:
-            print(f"Error fetching IBrew locations: {e}")
+            # Can't use self.logger here as this is a class method
+            import logging
+
+            logging.getLogger("ibrew").error(f"Error fetching IBrew locations: {e}")
             # Fallback to known locations
             return ["ebisu", "ginza", "shinbashi", "akihabara", "yokohama"]
 
     @classmethod
-    def _get_location_url(cls, location: str) -> str:
+    async def _get_location_url(cls, session: aiohttp.ClientSession, location: str) -> str:
         """Get the tap list URL for a specific location by scraping the homepage."""
         try:
-            response = session.get("https://craftbeerbar-ibrew.com/")
-            soup = BeautifulSoup(response.text, "html.parser")
+            response = await fetch_text(session, "https://craftbeerbar-ibrew.com/")
+            soup = BeautifulSoup(response, "html.parser")
 
             # Find the tap-blog-wrapper that contains this location's blog link
             wrappers = soup.find_all("div", class_="tap-blog-wrapper")
@@ -78,28 +81,20 @@ class IBrew(Shop):
                 return f"https://menu.craftbeerbar-ibrew.com/{location}-menu/todays-beer/"
 
         except Exception as e:
-            print(f"Error fetching URL for IBrew {location}: {e}")
+            # Can't use self.logger here as this is a class method
+            import logging
+
+            logging.getLogger("ibrew").error(f"Error fetching URL for IBrew {location}: {e}")
 
         # Return empty string if not found
         return ""
 
-    def __init__(self, location="ebisu", day=None):
+    def __init__(self, session: aiohttp.ClientSession, location="ebisu", day=None):
+        super().__init__(session)
         self.location = location
-
-        # Get the tap list URL dynamically
-        self.tap_list_url = self._get_location_url(location)
-        if not self.tap_list_url:
-            raise ValueError(f"Could not find tap list URL for IBrew location: {location}")
-
-        # Check if this location uses the API (Ebisu) or Google Sheets
-        self.is_api_based = "menu.craftbeerbar-ibrew.com" in self.tap_list_url
-
-        if self.is_api_based:
-            if day is None:
-                day = now_jst().date()
-            self.day = day
-            self.prices: dict[str, int] = {}
-            self._set_urls()
+        self.day = day if day is not None else now_jst().date()
+        self.prices: dict[str, int] = {}
+        self.display_name = f"IBrew {location.title()}"
 
     def _set_urls(self) -> None:
         """Set API URL for Ebisu location."""
@@ -125,22 +120,24 @@ class IBrew(Shop):
                 price += int(extra)
         return price
 
-    def _parse_beer(self, tap_json: dict) -> Iterator[ShopBeer]:
+    def _parse_beer(self, tap_json: dict) -> list[ShopBeer]:
         """Parse beer from API response (Ebisu only)."""
         brewery_name = tap_json.get("brewer")
         beer_name = tap_json.get("beer")
         image_url = tap_json.get("logo_url")
         price = self._compute_price(tap_json)
-        yield ShopBeer(
-            raw_name=f"{brewery_name} {beer_name}",
-            url=self.tap_list_url,
-            brewery_name=brewery_name,
-            beer_name=beer_name,
-            milliliters=470,
-            price=round(price * 1.1),  # tax
-            quantity=1,
-            image_url=image_url,
-        )
+        return [
+            ShopBeer(
+                raw_name=f"{brewery_name} {beer_name}",
+                url=self.tap_list_url,
+                brewery_name=brewery_name,
+                beer_name=beer_name,
+                milliliters=470,
+                price=round(price * 1.1),  # tax
+                quantity=1,
+                image_url=image_url,
+            )
+        ]
 
     def _clean_sheets_html(self, soup: BeautifulSoup) -> str:
         """Clean Google Sheets HTML to extract meaningful text for ChatGPT parsing."""
@@ -174,7 +171,7 @@ class IBrew(Shop):
 
         return "\n".join(cleaned_lines)
 
-    def _parse_sheets_with_gpt(self, cleaned_text: str) -> Iterator[ShopBeer]:
+    async def _parse_sheets_with_gpt(self, cleaned_text: str) -> AsyncIterator[ShopBeer]:
         """Parse cleaned sheets text using ChatGPT."""
         import csv
         from io import StringIO
@@ -229,7 +226,7 @@ class IBrew(Shop):
 
         try:
             gpt = ChatGPTConversation(system_prompt, model="gpt-5", temperature=1.0)
-            response = gpt.send(f"Parse this IBrew {self.location} tap list:\n\n{cleaned_text}")
+            response = await gpt.send(f"Parse this IBrew {self.location} tap list:\n\n{cleaned_text}")
 
             # Clean up response
             response = response.strip("```").lstrip("csv").strip()
@@ -274,43 +271,56 @@ class IBrew(Shop):
                 )
 
         except Exception as e:
-            print(f"Error parsing IBrew {self.location} with ChatGPT: {e}")
+            self.logger.error(f"Error parsing IBrew {self.location} with ChatGPT: {e}")
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
         """Iterate through all beers for this IBrew location."""
+        # Get the tap list URL dynamically
+        self.tap_list_url = await self._get_location_url(self.session, self.location)
+        if not self.tap_list_url:
+            self.logger.error(f"Could not find tap list URL for IBrew location: {self.location}")
+            return
+
+        # Check if this location uses the API (Ebisu) or Google Sheets
+        self.is_api_based = "menu.craftbeerbar-ibrew.com" in self.tap_list_url
+
         if self.is_api_based:
+            # Set API URLs for Ebisu
+            self._set_urls()
             # Use API for Ebisu
-            api_json = session.get(self.json_url).json()
+            api_json = await fetch_json(self.session, self.json_url)
             if not api_json["taps"]:  # no taplist yet, try previous day
                 self.day -= timedelta(days=1)
                 self._set_urls()
-                api_json = session.get(self.json_url).json()
+                api_json = await fetch_json(self.session, self.json_url)
             self._set_grade_prices(api_json)
             taps = api_json.get("taps", {}).values()
             for tap in taps:
                 if tap.get("status") != "ontap":
                     continue
                 try:
-                    yield from self._parse_beer(tap)
-                except Exception as e:
-                    print(f"Unexpected exception while parsing page, skipping.\n{e}")
+                    for beer in self._parse_beer(tap):
+                        yield beer
+                except Exception:
+                    self.logger.exception("Error parsing page")
         else:
             # Use ChatGPT parsing for Google Sheets locations
             try:
-                response = session.get(self.tap_list_url)
-                soup = BeautifulSoup(response.text, "html.parser")
+                response = await fetch_text(self.session, self.tap_list_url)
+                soup = BeautifulSoup(response, "html.parser")
 
                 # Clean the HTML to extract text
                 cleaned_text = self._clean_sheets_html(soup)
                 if not cleaned_text:
-                    print(f"No content found for IBrew {self.location}")
+                    self.logger.error(f"No content found for IBrew {self.location}")
                     return
 
                 # Parse with ChatGPT
-                yield from self._parse_sheets_with_gpt(cleaned_text)
+                async for beer in self._parse_sheets_with_gpt(cleaned_text):
+                    yield beer
 
             except Exception as e:
-                print(f"Error fetching IBrew {self.location} sheet: {e}")
+                self.logger.error(f"Error fetching IBrew {self.location} sheet: {e}")
 
     def get_db_entry(self, db: BeerDB) -> DBShop:
         """Get or create database entry for this shop."""

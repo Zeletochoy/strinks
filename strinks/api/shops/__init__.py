@@ -1,7 +1,9 @@
+import logging
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 
+import aiohttp
 from pydantic import BaseModel, model_validator
 
 from ...db.models import BeerDB
@@ -79,19 +81,29 @@ class Shop(ABC):
     short_name = "shop"
     display_name = "Shop"
 
+    def __init__(self, session: aiohttp.ClientSession, **kwargs):
+        """Initialize shop with optional aiohttp session for async operations."""
+        self.session = session
+        # Set up logger with short shop name
+        self.logger = logging.getLogger(self.short_name)
+        # Accept kwargs for backward compatibility with location parameter etc.
+
     @abstractmethod
-    def iter_beers(self) -> Iterator[ShopBeer]: ...
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
+        raise NotImplementedError
+        if False:
+            yield
 
     @abstractmethod
     def get_db_entry(self, db: BeerDB) -> DBShop: ...
 
 
-def get_shop_map() -> dict[str, Callable[[], Shop]]:
+async def get_shop_map(session: aiohttp.ClientSession) -> dict[str, Callable[[aiohttp.ClientSession], Shop]]:
     """Get the map of shop names to shop factory functions.
 
     Uses dynamic discovery to find all Shop subclasses automatically.
     """
-    return get_shop_map_dynamic()
+    return await get_shop_map_dynamic(session)
 
 
 class NotABeerError(Exception): ...

@@ -1,17 +1,15 @@
 """Beer no Engawa scraper."""
 
 import re
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
 from bs4 import BeautifulSoup
 
 from ...db.models import BeerDB
 from ...db.tables import Shop as DBShop
-from ..utils import get_retrying_session
+from ..async_utils import fetch_text
 from . import NoBeersError, Shop, ShopBeer
 from .parsing import clean_beer_name, is_beer_set, parse_price
-
-session = get_retrying_session()
 
 
 class BeerEngawa(Shop):
@@ -20,7 +18,7 @@ class BeerEngawa(Shop):
     short_name = "engawa"
     display_name = "Beer no Engawa"
 
-    def _iter_pages(self) -> Iterator[BeautifulSoup]:
+    async def _iter_pages(self) -> AsyncIterator[BeautifulSoup]:
         """Iterate through all pages of beer listings.
 
         Filters to only show bottles (瓶) and cans (缶) - Cc1[0]=36&Cc1[1]=37
@@ -32,8 +30,8 @@ class BeerEngawa(Shop):
             url = f"https://beer-engawa.jp/products/all?Cc1%5B0%5D=36&Cc1%5B1%5D=37&exclusion=1&pageno={page_num}"
 
             try:
-                response = session.get(url)
-                soup = BeautifulSoup(response.text, "html.parser")
+                response = await fetch_text(self.session, url)
+                soup = BeautifulSoup(response, "html.parser")
 
                 # Check if we have products on this page
                 products = soup.select(".js-product-block")
@@ -44,10 +42,10 @@ class BeerEngawa(Shop):
                 page_num += 1
 
             except Exception as e:
-                print(f"Error fetching page {url}: {e}")
+                self.logger.error(f"Error fetching page {url}: {e}")
                 break
 
-    def _iter_page_beers(self, page_soup: BeautifulSoup) -> Iterator[ShopBeer]:
+    async def _iter_page_beers(self, page_soup: BeautifulSoup) -> AsyncIterator[ShopBeer]:
         """Extract beer info from a page."""
         products = page_soup.select(".js-product-block")
 
@@ -139,16 +137,16 @@ class BeerEngawa(Shop):
                 )
 
             except Exception as e:
-                print(f"Error parsing product: {e}")
+                self.logger.error(f"Error parsing product: {e}")
                 continue
 
-    def iter_beers(self) -> Iterator[ShopBeer]:
+    async def iter_beers(self) -> AsyncIterator[ShopBeer]:
         """Iterate through all beers on Beer no Engawa."""
         seen_urls = set()
 
-        for listing_page in self._iter_pages():
+        async for listing_page in self._iter_pages():
             try:
-                for beer in self._iter_page_beers(listing_page):
+                async for beer in self._iter_page_beers(listing_page):
                     # Skip if we've already seen this beer
                     if beer.url in seen_urls:
                         continue

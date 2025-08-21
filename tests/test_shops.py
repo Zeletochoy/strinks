@@ -1,5 +1,6 @@
 """Tests for shop scrapers and ShopBeer model."""
 
+import aiohttp
 import pytest
 
 from strinks.api.shops import NotABeerError, ShopBeer, get_shop_map
@@ -77,68 +78,76 @@ class TestShopBeer:
 
 
 class TestShopMap:
-    def test_get_shop_map(self):
+    async def test_get_shop_map(self):
         """Test that shop map contains expected shops."""
-        shop_map = get_shop_map()
+        async with aiohttp.ClientSession() as session:
+            shop_map = await get_shop_map(session)
 
-        # Check some known shops
-        assert "volta" in shop_map
-        assert "craft" in shop_map
-        assert "ibrew" in shop_map
-        assert "digtheline" in shop_map
+            # Check some known shops
+            assert "volta" in shop_map
+            assert "craft" in shop_map
+            assert "digtheline" in shop_map
 
-        # Check CBM locations
-        cbm_shops = [k for k in shop_map if k.startswith("cbm-")]
-        assert len(cbm_shops) > 0
+            # Check that location-based shops are expanded
+            # IBrew should have multiple locations
+            ibrew_shops = [k for k in shop_map if k.startswith("ibrew-")]
+            assert len(ibrew_shops) > 0, "Should have IBrew locations"
 
-    def test_shop_instantiation(self):
+            # CBM should have multiple locations
+            cbm_shops = [k for k in shop_map if k.startswith("cbm-")]
+            assert len(cbm_shops) > 0, "Should have CBM locations"
+
+    async def test_shop_instantiation(self):
         """Test that shops can be instantiated."""
-        shop_map = get_shop_map()
+        async with aiohttp.ClientSession() as session:
+            shop_map = await get_shop_map(session)
 
-        # Test regular shop
-        volta_factory = shop_map["volta"]
-        volta = volta_factory()
-        assert volta.short_name == "volta"
-        assert volta.display_name == "Beer Volta"
+            # Test regular shop
+            volta_factory = shop_map["volta"]
+            volta = volta_factory(session)
+            assert volta.short_name == "volta"
+            assert volta.display_name == "Beer Volta"
 
-        # Test CBM with location
-        if "cbm-jimbocho" in shop_map:
-            cbm_factory = shop_map["cbm-jimbocho"]
-            cbm = cbm_factory()
-            assert cbm.location == "jimbocho"
+            # Test CBM with location
+            if "cbm-jimbocho" in shop_map:
+                cbm_factory = shop_map["cbm-jimbocho"]
+                cbm = cbm_factory(session)
+                assert cbm.location == "jimbocho"
 
 
 class TestShopIntegration:
     """Integration tests for shop scrapers."""
 
     @pytest.mark.integration
-    def test_volta_structure(self):
+    async def test_volta_structure(self):
         """Test that Volta shop has expected structure."""
         from strinks.api.shops.volta import Volta
 
-        shop = Volta()
-        assert shop.short_name == "volta"
-        assert shop.display_name == "Beer Volta"
-        assert hasattr(shop, "iter_beers")
-        assert hasattr(shop, "get_db_entry")
+        async with aiohttp.ClientSession() as session:
+            shop = Volta(session)
+            assert shop.short_name == "volta"
+            assert shop.display_name == "Beer Volta"
+            assert hasattr(shop, "iter_beers")
+            assert hasattr(shop, "get_db_entry")
 
     @pytest.mark.integration
-    def test_ibrew_initialization(self):
+    async def test_ibrew_initialization(self):
         """Test IBrew initialization with different parameters."""
         from datetime import date
 
         from strinks.api.shops.ibrew import IBrew
 
-        # Default initialization
-        shop1 = IBrew()
-        assert shop1.location == "ebisu"
-        assert isinstance(shop1.day, date)
+        async with aiohttp.ClientSession() as session:
+            # Default initialization
+            shop1 = IBrew(session=session)
+            assert shop1.location == "ebisu"
+            assert isinstance(shop1.day, date)
 
-        # With specific location
-        shop2 = IBrew(location="shinjuku")
-        assert shop2.location == "shinjuku"
+            # With specific location
+            shop2 = IBrew(session=session, location="shinjuku")
+            assert shop2.location == "shinjuku"
 
-        # With specific day
-        test_day = date(2024, 1, 15)
-        shop3 = IBrew(day=test_day)
-        assert shop3.day == test_day
+            # With specific day
+            test_day = date(2024, 1, 15)
+            shop3 = IBrew(session=session, day=test_day)
+            assert shop3.day == test_day

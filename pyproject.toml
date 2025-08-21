@@ -24,6 +24,7 @@ dependencies = [
     "sqlmodel>=0.0.14",
     "unidecode>=1.1.1",
     "alembic>=1.13.0",
+    "aiohttp>=3.12.15",
 ]
 
 [project.urls]
@@ -105,6 +106,7 @@ warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
 ]

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import NamedTuple
 
@@ -8,7 +9,6 @@ from strinks.api.shops import Shop, get_shop_map
 from strinks.api.untappd import UntappdClient
 from strinks.db import BeerDB, get_db
 
-SHOP_MAP = get_shop_map()
 logger = logging.getLogger(__name__)
 
 
@@ -20,14 +20,14 @@ class ScrapeSummary(NamedTuple):
         return f"Scraped {self.num_found} beers, found {self.num_untappd} on untappd."
 
 
-def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -> ScrapeSummary:
+async def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -> ScrapeSummary:
     found_ids: set[int] = set()
     num_found = num_untappd = 0
     with db.commit_or_rollback():
         db_shop = shop.get_db_entry(db)
-    for offering in shop.iter_beers():
+    async for offering in shop.iter_beers():
         num_found += 1
-        res = untappd.try_find_beer(offering)
+        res = await untappd.try_find_beer(offering)
         if res is None:
             if verbose:
                 # Show the queries that were tried
@@ -97,9 +97,20 @@ def scrape_shop(shop: Shop, db: BeerDB, untappd: UntappdClient, verbose: bool) -
     default=None,
     help="Database path, default: <package_root>/db.sqlite",
 )
-@click.option("-s", "--shop-name", type=click.Choice(list(SHOP_MAP)), default=None, help="Shop name, default: all")
+@click.option(
+    "-s",
+    "--shop-name",
+    multiple=True,
+    help="Shop name(s), can be specified multiple times. For CBM and IBrew, use format like 'cbm-jimbocho'. Default: all",
+)
 @click.option("-v", "--verbose", is_flag=True, help="Display debug info")
-def cli(database: click.Path | None, shop_name: str | None, verbose: bool):
+@click.option("-p", "--parallel", type=int, default=1, help="Number of parallel workers (default: 1)")
+def cli(database: click.Path | None, shop_name: tuple[str, ...], verbose: bool, parallel: int):
+    """Run the async scraper."""
+    asyncio.run(async_main(database, shop_name, verbose, parallel))
+
+
+async def async_main(database: click.Path | None, shop_name: tuple[str, ...], verbose: bool, parallel: int):
     # Set up logging
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
@@ -113,27 +124,90 @@ def cli(database: click.Path | None, shop_name: str | None, verbose: bool):
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
 
-    shops = [cls() for _, cls in SHOP_MAP.items()] if shop_name is None else [SHOP_MAP[shop_name]()]
+    from strinks.api.async_utils import get_async_session
 
-    untappd = UntappdClient()
     db = get_db(str(database) if database is not None else None)
 
-    summary = {}
+    summary: dict[str, str] = {}
 
-    try:
-        for shop in shops:
-            logger.info(f"\n[{shop.display_name}]")
-            try:
-                shop_summary = scrape_shop(shop, db, untappd, verbose)
-                summary[shop.display_name] = str(shop_summary)
-            except Exception:
-                from traceback import format_exc
+    async with get_async_session() as session:
+        untappd = UntappdClient(session)
+        # Get the shop map with location expansion
+        shop_map = await get_shop_map(session)
 
-                formatted = f"Error: {format_exc()}" if verbose else "Error: Failed to scrape shop"
-                summary[shop.display_name] = formatted
-                logger.error(formatted)
-    finally:
-        logger.info("\n" + "=" * 30 + " Summary " + "=" * 30)
-        for shop_name, summary_str in summary.items():
-            logger.info(f"{shop_name}: {summary_str}")
+        # Create shop instances with session
+        shops = []
+
+        if not shop_name:
+            # Get all shops - locations already expanded in shop_map
+            for shop_key, shop_factory in shop_map.items():
+                try:
+                    shop = shop_factory(session)
+                    shops.append(shop)
+                except TypeError:
+                    # Skip if constructor doesn't match
+                    logger.warning(f"Could not instantiate {shop_key}")
+                    continue
+        else:
+            # Specific shops requested
+            for name in shop_name:
+                if name in shop_map:
+                    shop_factory = shop_map[name]
+                    try:
+                        shop = shop_factory(session)
+                        shops.append(shop)
+                    except TypeError as e:
+                        logger.error(f"Could not instantiate {name}: {e}")
+                else:
+                    logger.error(f"Unknown shop: {name}")
+                    continue
+
+        if parallel > 1:
+            # Parallel execution
+            logger.info(f"Scraping {len(shops)} shops with {parallel} workers in parallel...")
+
+            async def scrape_task(shop: Shop) -> tuple[str, str]:
+                logger.info(f"[{shop.display_name}] Starting scrape")
+                try:
+                    shop_summary = await scrape_shop(shop, db, untappd, verbose)
+                    result = str(shop_summary)
+                    logger.info(f"[{shop.display_name}] {result}")
+                    return shop.display_name, result
+                except Exception as e:
+                    from traceback import format_exc
+
+                    if verbose:
+                        logger.error(f"[{shop.display_name}] Error: {format_exc()}")
+                    else:
+                        logger.error(f"[{shop.display_name}] Error: {e}")
+                    return shop.display_name, f"Error: {type(e).__name__}"
+
+            # Run tasks with limited concurrency
+            tasks = [scrape_task(shop) for shop in shops]
+            results = await asyncio.gather(*tasks)
+
+            for name, result in results:
+                summary[name] = result
+        else:
+            # Sequential execution (original behavior)
+            for shop in shops:
+                logger.info(f"\n[{shop.display_name}]")
+                try:
+                    shop_summary = await scrape_shop(shop, db, untappd, verbose)
+                    summary[shop.display_name] = str(shop_summary)
+                except Exception as e:
+                    from traceback import format_exc
+
+                    if verbose:
+                        logger.error(f"Error: {format_exc()}")
+                    else:
+                        logger.error(f"Error: {e}")
+                    summary[shop.display_name] = f"Error: {type(e).__name__}"
+
+    # Print final summary
+    logger.info("\n" + "=" * 30 + " Summary " + "=" * 30)
+    if not summary:
+        logger.error("Summary dictionary is empty!")
+    for name, summary_str in summary.items():
+        logger.info(f"{name}: {summary_str}")
     logger.info("Done.")
