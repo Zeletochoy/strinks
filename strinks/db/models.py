@@ -251,6 +251,81 @@ class BeerDB:
 
         return self.session.exec(statement)
 
+    def get_sales(
+        self,
+        n: int,
+        min_discount_percent: float = 15.0,
+        search: str | None = None,
+        shop_id: int | None = None,
+        styles: Iterable[str] | None = None,
+        min_price: int | None = None,
+        max_price: int | None = None,
+        exclude_user_had: int | None = None,
+        countries: Iterable[str] | None = None,
+        offset: int = 0,
+    ) -> Iterator[tuple[Beer, float, Offering]]:
+        """Get beers sorted by price drop compared to next cheapest offering.
+
+        Finds beers where the cheapest offering is significantly cheaper than
+        the second cheapest, indicating a potential sale.
+
+        Returns tuples of (beer, discount_percent, cheapest_offering).
+        """
+        # Get all beers with their offerings
+        statement = select(Beer).join(Offering).join(Brewery).where(Beer.rating != 0, Offering.price != 0)
+
+        # Apply filters
+        if search is not None:
+            like = f"%{escape_like(search)}%"
+            statement = statement.where(
+                or_(
+                    col(Beer.name).ilike(like),
+                    col(Brewery.name).ilike(like),
+                )
+            )
+        if min_price is not None:
+            statement = statement.where(Offering.price >= min_price)
+        if max_price is not None:
+            statement = statement.where(Offering.price <= max_price)
+        if shop_id is not None:
+            statement = statement.where(Offering.shop_id == shop_id)
+        if styles:
+            statement = statement.where(col(Beer.style).in_(styles))
+        if countries:
+            statement = statement.where(col(Brewery.country).in_(countries))
+        if exclude_user_had is not None:
+            had_beer_ids = select(UserRating.beer_id).where(UserRating.user_id == exclude_user_had)
+            statement = statement.where(col(Beer.beer_id).not_in(had_beer_ids))
+
+        statement = statement.distinct()
+        beers = list(self.session.exec(statement))
+
+        # Calculate discount for each beer
+        sales = []
+        for beer in beers:
+            if len(beer.offerings) >= 2:
+                # Sort offerings by price per ml
+                sorted_offerings = sorted(beer.offerings, key=lambda o: o.price / o.milliliters)
+                cheapest = sorted_offerings[0]
+                second_cheapest = sorted_offerings[1]
+
+                # Calculate discount percentage
+                cheapest_ppm = cheapest.price / cheapest.milliliters
+                second_ppm = second_cheapest.price / second_cheapest.milliliters
+
+                if second_ppm > cheapest_ppm:
+                    discount_pct = ((second_ppm - cheapest_ppm) / second_ppm) * 100
+
+                    if discount_pct >= min_discount_percent:
+                        sales.append((beer, discount_pct, cheapest))
+
+        # Sort by discount percentage (highest first)
+        sales.sort(key=lambda x: x[1], reverse=True)
+
+        # Apply pagination and yield
+        for beer, discount_pct, cheapest_offering in sales[offset : offset + n]:
+            yield (beer, discount_pct, cheapest_offering)
+
     def get_shops(self) -> Iterator[Shop]:
         statement = select(Shop).order_by(Shop.name)
         return self.session.exec(statement)

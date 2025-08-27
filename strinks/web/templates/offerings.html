@@ -32,32 +32,35 @@
         </ul>
       </div>
     </div>
-    <!--Value Factor-->
+    <!--Profile-->
     <div class="mdl-cell mdl-cell--2-col">
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label getmdl-select getmdl-select__fix-height" style="width: 100%;">
-        <input type="text" value="" class="mdl-textfield__input" id="value_factor" readonly>
-        <input type="hidden" value="" name="value_factor" onchange="this.form.submit()">
-        <label for="value_factor" class="mdl-textfield__label">Profile</label>
-        <ul for="value_factor" class="mdl-menu mdl-menu--bottom-left mdl-js-menu" style="width: auto; min-width: 220px;">
-          <li class="mdl-menu__item" data-val="0"{% if value_factor == 0 %} data-selected="true"{% endif %}>
+        <input type="text" value="" class="mdl-textfield__input" id="profile" readonly>
+        <input type="hidden" value="" name="profile" onchange="this.form.submit()">
+        <label for="profile" class="mdl-textfield__label">Profile</label>
+        <ul for="profile" class="mdl-menu mdl-menu--bottom-left mdl-js-menu" style="width: auto; min-width: 220px;">
+          <li class="mdl-menu__item" data-val="on_sale"{% if profile == "on_sale" %} data-selected="true"{% endif %}>
+            On Sale
+          </li>
+          <li class="mdl-menu__item" data-val="first_dibs"{% if profile == "first_dibs" %} data-selected="true"{% endif %}>
             First Dibs
           </li>
-          <li class="mdl-menu__item" data-val="1"{% if value_factor == 1 %} data-selected="true"{% endif %}>
+          <li class="mdl-menu__item" data-val="cheapest"{% if profile == "cheapest" %} data-selected="true"{% endif %}>
             The Cheapest Stuff
           </li>
-          <li class="mdl-menu__item" data-val="2"{% if value_factor == 2 %} data-selected="true"{% endif %}>
+          <li class="mdl-menu__item" data-val="great_deals"{% if profile == "great_deals" %} data-selected="true"{% endif %}>
             Great Deals
           </li>
-          <li class="mdl-menu__item" data-val="4"{% if value_factor == 4 %} data-selected="true"{% endif %}>
+          <li class="mdl-menu__item" data-val="balanced"{% if profile == "balanced" %} data-selected="true"{% endif %}>
             Balanced Drinker
           </li>
-          <li class="mdl-menu__item" data-val="8"{% if value_factor == 8 or (value_factor is none) %} data-selected="true"{% endif %}>
-            Salaryman Connoiseur
+          <li class="mdl-menu__item" data-val="salaryman"{% if profile == "salaryman" or profile is none %} data-selected="true"{% endif %}>
+            Salaryman Connoisseur
           </li>
-          <li class="mdl-menu__item" data-val="12"{% if value_factor == 12 %} data-selected="true"{% endif %}>
+          <li class="mdl-menu__item" data-val="high_class"{% if profile == "high_class" %} data-selected="true"{% endif %}>
             High Class
           </li>
-          <li class="mdl-menu__item" data-val="99999999999"{% if value_factor == 99999999999 %} data-selected="true"{% endif %}>
+          <li class="mdl-menu__item" data-val="no_expense"{% if profile == "no_expense" %} data-selected="true"{% endif %}>
             I Spare No Expense
           </li>
         </ul>

@@ -54,25 +54,25 @@
       {% endif %}
 
       {% if sorted_offerings|length > 1 %}
-      <div class="more-offerings-container" data-beer-id="{{beer.beer_id}}">
-        <a href="#" class="view-more-shops" onclick="toggleMoreShops(event, '{{beer.beer_id}}'); return false;">
-          <span class="more-shops-text">View {{sorted_offerings|length - 1}} more shop{% if sorted_offerings|length > 2 %}s{% endif %}</span>
-          <i class="fas fa-chevron-down more-shops-icon"></i>
+    <div class="more-offerings-container" data-beer-id="{{beer.beer_id}}">
+      <a href="#" class="view-more-shops" onclick="toggleMoreShops(event, '{{beer.beer_id}}'); return false;">
+        <span class="more-shops-text">View {{sorted_offerings|length - 1}} more shop{% if sorted_offerings|length > 2 %}s{% endif %}</span>
+        <i class="fas fa-chevron-down more-shops-icon"></i>
+      </a>
+      <div class="more-offerings hidden" id="more-offerings-{{beer.beer_id}}">
+        {% for offering in sorted_offerings[1:] %}
+        <a class="offering-item" href="{{offering.url}}">
+          <li class="mdl-list__item mdl-list__item--two-line">
+            <span class="mdl-list__item-primary-content">
+              <span>{{offering.shop.name}}</span>
+              <span class="mdl-list__item-sub-title">{{offering.price}}¥ - {{offering.milliliters}}mL ({{offering.price_per_ml | round(2)}}¥/mL)</span>
+            </span>
+          </li>
         </a>
-        <div class="more-offerings hidden" id="more-offerings-{{beer.beer_id}}">
-          {% for offering in sorted_offerings[1:] %}
-          <a class="offering-item" href="{{offering.url}}">
-            <li class="mdl-list__item mdl-list__item--two-line">
-              <span class="mdl-list__item-primary-content">
-                <span>{{offering.shop.name}}</span>
-                <span class="mdl-list__item-sub-title">{{offering.price}}¥ - {{offering.milliliters}}mL ({{offering.price_per_ml | round(2)}}¥/mL)</span>
-              </span>
-            </li>
-          </a>
-          {% endfor %}
-        </div>
+        {% endfor %}
       </div>
-      {% endif %}
+    </div>
+    {% endif %}
     </ul>
   </div>
 </div>

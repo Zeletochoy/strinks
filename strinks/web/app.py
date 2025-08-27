@@ -3,6 +3,7 @@ from flask import Flask, jsonify, make_response, redirect, render_template, requ
 from ..api.styles import GROUPED_STYLES_WITH_IDS, STYLES, get_styles_by_ids
 from ..api.untappd import UNTAPPD_OAUTH_URL, untappd_get_oauth_token, untappd_get_user_info
 from ..db import get_db
+from .profiles import BeerProfile
 
 app = Flask(__name__)
 
@@ -17,9 +18,11 @@ USER_ID_COOKIE = "strinks_user_id"
 def offerings():
     db = get_db()
     shop_id = request.args.get("shop_id", default=None, type=int)
-    value_factor = request.args.get("value_factor", default=8.0, type=float)
-    if value_factor is None:
-        value_factor = 8.0
+
+    # Get profile from request, default to SALARYMAN
+    profile_str = request.args.get("profile", default=BeerProfile.SALARYMAN.value, type=str)
+    profile = BeerProfile.from_string(profile_str)
+
     search = request.args.get("search", default=None, type=str)
     min_price = request.args.get("min_price", default=None, type=int)
     max_price = request.args.get("max_price", default=None, type=int)
@@ -36,17 +39,37 @@ def offerings():
     user = db.get_user(int(user_id)) if user_id is not None else None
     user_ratings = {rating.beer.beer_id: rating.rating for rating in (user.ratings if user is not None else [])}
 
-    beers = db.get_best_cospa(
-        PAGE_SIZE,  # Load only first page initially
-        value_factor,
-        search=search,
-        min_price=min_price,
-        max_price=max_price,
-        shop_id=shop_id,
-        styles=enabled_styles,
-        exclude_user_had=user.id if exclude_had and user is not None else None,
-        countries=selected_countries,
-    )
+    # Get beers based on profile
+    if profile == BeerProfile.ON_SALE:
+        # get_sales returns tuples of (beer, discount_percent, cheapest_offering)
+        # We only need the beer objects for the template
+        beers = [
+            beer
+            for beer, _, _ in db.get_sales(
+                PAGE_SIZE,
+                search=search,
+                min_price=min_price,
+                max_price=max_price,
+                shop_id=shop_id,
+                styles=enabled_styles,
+                exclude_user_had=user.id if exclude_had and user is not None else None,
+                countries=selected_countries,
+            )
+        ]
+    else:
+        # Use cospa-based sorting with value factor
+        value_factor = profile.get_value_factor()
+        beers = db.get_best_cospa(
+            PAGE_SIZE,  # Load only first page initially
+            value_factor,
+            search=search,
+            min_price=min_price,
+            max_price=max_price,
+            shop_id=shop_id,
+            styles=enabled_styles,
+            exclude_user_had=user.id if exclude_had and user is not None else None,
+            countries=selected_countries,
+        )
     shops = db.get_shops()
     countries = db.get_countries()
 
@@ -55,7 +78,8 @@ def offerings():
         beers=beers,
         shops=shops,
         shop_id=shop_id,
-        value_factor=value_factor,
+        profile=profile.value,  # Pass the profile string value
+        profile_display=profile.get_display_name(),  # Pass the display name
         search=search,
         min_price=min_price,
         max_price=max_price,
@@ -125,9 +149,11 @@ def api_beers():
     """API endpoint for fetching beers with pagination."""
     db = get_db()
     shop_id = request.args.get("shop_id", default=None, type=int)
-    value_factor = request.args.get("value_factor", default=8.0, type=float)
-    if value_factor is None:
-        value_factor = 8.0
+
+    # Get profile from request, default to SALARYMAN
+    profile_str = request.args.get("profile", default=BeerProfile.SALARYMAN.value, type=str)
+    profile = BeerProfile.from_string(profile_str)
+
     search = request.args.get("search", default=None, type=str)
     min_price = request.args.get("min_price", default=None, type=int)
     max_price = request.args.get("max_price", default=None, type=int)
@@ -145,20 +171,41 @@ def api_beers():
     user = db.get_user(int(user_id)) if user_id is not None else None
     user_ratings = {rating.beer.beer_id: rating.rating for rating in (user.ratings if user is not None else [])}
 
-    beers = list(
-        db.get_best_cospa(
-            PAGE_SIZE,
-            value_factor,
-            search=search,
-            min_price=min_price,
-            max_price=max_price,
-            shop_id=shop_id,
-            styles=enabled_styles,
-            exclude_user_had=user.id if exclude_had and user is not None else None,
-            countries=selected_countries,
-            offset=page * PAGE_SIZE,
+    # Get beers based on profile
+    if profile == BeerProfile.ON_SALE:
+        # get_sales returns tuples of (beer, discount_percent, cheapest_offering)
+        # We only need the beer objects for the template
+        beers = [
+            beer
+            for beer, _, _ in db.get_sales(
+                PAGE_SIZE,
+                search=search,
+                min_price=min_price,
+                max_price=max_price,
+                shop_id=shop_id,
+                styles=enabled_styles,
+                exclude_user_had=user.id if exclude_had and user is not None else None,
+                countries=selected_countries,
+                offset=page * PAGE_SIZE,
+            )
+        ]
+    else:
+        # Use cospa-based sorting with value factor
+        value_factor = profile.get_value_factor()
+        beers = list(
+            db.get_best_cospa(
+                PAGE_SIZE,
+                value_factor,
+                search=search,
+                min_price=min_price,
+                max_price=max_price,
+                shop_id=shop_id,
+                styles=enabled_styles,
+                exclude_user_had=user.id if exclude_had and user is not None else None,
+                countries=selected_countries,
+                offset=page * PAGE_SIZE,
+            )
         )
-    )
 
     # Render beer cards HTML
     beer_cards_html = []
