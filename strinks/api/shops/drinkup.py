@@ -14,17 +14,42 @@ class DrinkUp(Shop):
     short_name = "drinkup"
     display_name = "Drink Up"
 
+    async def _ensure_session_ready(self) -> None:
+        """Ensure the cloudscraper session is ready with CF challenge solved."""
+        if not hasattr(self, "_session_ready"):
+            # First visit to solve Cloudflare challenge
+            base_url = "https://drinkuppers-ecshop.stores.jp/"
+            domain = "drinkuppers-ecshop.stores.jp"
+            try:
+                # This will create a persistent session and solve CF challenge
+                await fetch_cloudflare_protected(base_url, domain=domain)
+                self._session_ready = True
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize Drink Up session: {e}")
+                raise NoBeersError("Could not bypass Cloudflare")
+
     async def _iter_pages(self) -> AsyncIterator[BeautifulSoup]:
+        # Ensure CF challenge is solved
+        await self._ensure_session_ready()
+
         i = 1
+        domain = "drinkuppers-ecshop.stores.jp"
+        # Set age confirmation cookie after CF challenge is solved
+        cookies = {"confirm": "true"}
+
         while True:
             url = f"https://drinkuppers-ecshop.stores.jp/?page={i}"
-            # Use cloudscraper for Cloudflare-protected site
-            page = await fetch_cloudflare_protected(url)
+            # Use cloudscraper with persistent session and age confirmation
+            page = await fetch_cloudflare_protected(url, cookies=cookies, domain=domain)
             yield BeautifulSoup(page, "html.parser")
             i += 1
 
     async def _iter_page_beers(self, page_soup: BeautifulSoup) -> AsyncIterator[tuple[BeautifulSoup, str]]:
         empty = True
+        domain = "drinkuppers-ecshop.stores.jp"
+        # Age confirmation cookie for product pages
+        cookies = {"confirm": "true"}
+
         items = page_soup.find_all("a", class_="c-itemList__item-link")
         for item in items:
             if not item.get("href"):
@@ -36,7 +61,8 @@ class DrinkUp(Shop):
             title = title_elem.get_text().strip()
             if title.endswith("セット"):  # skip sets
                 continue
-            page = await fetch_cloudflare_protected(url)
+            # Use persistent cloudscraper session
+            page = await fetch_cloudflare_protected(url, cookies=cookies, domain=domain)
             yield BeautifulSoup(page, "html.parser"), url
             empty = False
         if empty:

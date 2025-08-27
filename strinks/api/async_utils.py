@@ -2,13 +2,17 @@
 
 import asyncio
 import json
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from typing import Any, cast
 from urllib.parse import urlparse
 
 import aiohttp
 import cloudscraper
+
+logger = logging.getLogger(__name__)
 
 
 class RateLimiter:
@@ -255,11 +259,32 @@ async def fetch_untappd(
 
 # Thread pool for synchronous cloudscraper operations
 _executor = ThreadPoolExecutor(max_workers=4)
-_scraper = cloudscraper.create_scraper()
+
+# Create shop-specific cloudscraper sessions
+_cloudscrapers: dict[str, cloudscraper.CloudScraper] = {}
+
+
+def get_cloudscraper_for_domain(domain: str, reset: bool = False) -> cloudscraper.CloudScraper:
+    """Get or create a cloudscraper session for a specific domain.
+
+    Args:
+        domain: The domain to get a session for
+        reset: If True, force create a new session
+    """
+    if reset or domain not in _cloudscrapers:
+        _cloudscrapers[domain] = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "windows", "desktop": True},
+            delay=10,  # Give time for CF challenges
+        )
+    return _cloudscrapers[domain]
 
 
 async def fetch_cloudflare_protected(
-    url: str, params: dict[str, str] | None = None, headers: dict[str, str] | None = None
+    url: str,
+    params: dict[str, str] | None = None,
+    headers: dict[str, str] | None = None,
+    cookies: dict[str, str] | None = None,
+    domain: str | None = None,
 ) -> str:
     """Fetch URL protected by Cloudflare using cloudscraper.
 
@@ -267,17 +292,75 @@ async def fetch_cloudflare_protected(
         url: URL to fetch
         params: Optional query parameters
         headers: Optional headers dict
+        cookies: Optional cookies dict to set
+        domain: Optional domain for persistent session (for sites needing cookies)
 
     Returns:
         Response text
     """
+    from urllib.parse import urlparse
+
     loop = asyncio.get_event_loop()
+
+    # Parse URL to get domain
+    parsed = urlparse(url)
+
+    # Use persistent session for specific domain if requested
+    scraper = get_cloudscraper_for_domain(domain) if domain else get_cloudscraper_for_domain(parsed.netloc)
+
+    # Set any cookies requested
+    if cookies:
+        for name, value in cookies.items():
+            scraper.cookies.set(name, value, domain=domain if domain else parsed.netloc)
+
     # Run the synchronous cloudscraper in a thread pool
     kwargs = {}
     if params:
         kwargs["params"] = params
     if headers:
         kwargs["headers"] = headers
-    response = await loop.run_in_executor(_executor, lambda: _scraper.get(url, **kwargs))
-    response.raise_for_status()
-    return cast(str, response.text)
+
+    # Apply domain-based rate limiting (max 1 concurrent request per domain)
+    semaphore = _domain_limiter.get_semaphore(parsed.netloc)
+
+    async with semaphore:
+        # Check if we need rate limiting for this domain
+        limiter = _domain_limiter.get_limiter(parsed.netloc, url)
+        if limiter:
+            await limiter.wait_if_needed()
+
+        # Always add a small delay for cloudscraper sites to avoid 429
+        # This is needed because cloudscraper maintains its own session
+        # and doesn't respect our async semaphores properly
+        await asyncio.sleep(0.5)
+
+        # Retry with exponential backoff on 429
+        for attempt in range(3):
+            response = await loop.run_in_executor(_executor, partial(scraper.get, url, **kwargs))
+            if response.status_code == 429:
+                # Add rate limiting for this domain
+                _domain_limiter.add_rate_limit(parsed.netloc, 2.0)  # Increase delay to 2 seconds
+                if attempt < 2:
+                    # Exponential backoff: 1s, 2s, 4s
+                    wait_time = 2**attempt
+                    logger.debug(f"Got 429, waiting {wait_time}s before retry (attempt {attempt + 1}/3)")
+                    await asyncio.sleep(wait_time)
+                    continue
+                response.raise_for_status()  # Raise on last attempt
+            elif response.status_code == 403 and attempt < 2:
+                # Cloudflare might have blocked us, reset the session and retry
+                logger.debug(f"Got 403, resetting session and retrying (attempt {attempt + 1}/3)")
+                scraper = get_cloudscraper_for_domain(domain if domain else parsed.netloc, reset=True)
+                # Re-set cookies after reset
+                if cookies:
+                    for name, value in cookies.items():
+                        scraper.cookies.set(name, value, domain=domain if domain else parsed.netloc)
+                await asyncio.sleep(2)  # Wait a bit before retry
+                continue
+            elif response.status_code >= 400:
+                response.raise_for_status()
+            else:
+                return cast(str, response.text)
+
+    # Should never reach here
+    raise RuntimeError("Retry loop exited unexpectedly")
