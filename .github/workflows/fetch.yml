@@ -62,7 +62,7 @@ jobs:
 
       - name: Scrape offerings
         run: |
-          strinks-scrape -v | tee logs
+          strinks-scrape -v -p 8 2>&1 | tee logs
           grep -zo '========== Summary ==========\(.*\n\)*' < logs >> $GITHUB_STEP_SUMMARY
           rm logs
         env:
