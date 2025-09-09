@@ -23,7 +23,7 @@ async def fetch_user_had(user: User, db: BeerDB, session: aiohttp.ClientSession,
     latest_rating = db.get_latest_rating(user.id)
     from_time = latest_rating.updated_at if latest_rating is not None else None
     new_beers = new_ratings = 0
-    for beer, rating in untappd.iter_had_beers(from_time=from_time):
+    async for beer, rating in untappd.iter_had_beers(from_time=from_time):
         if rating.rating is None:  # not rated
             continue
         # TODO: DB beers/ratings not updated
@@ -107,7 +107,7 @@ async def _fetch_all(database: click.Path | None, user_id: int | None, verbose: 
 
                     formatted = f"Error: {format_exc()}"
                     summary[user.user_name] = formatted
-                print(formatted)
+                    print(formatted)
     finally:
         print("=" * 10, "Summary", "=" * 10)
         for user_name, summary_str in summary.items():

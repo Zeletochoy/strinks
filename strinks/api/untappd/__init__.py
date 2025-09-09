@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from collections.abc import Iterator, Sequence
+from collections.abc import AsyncIterator, Sequence
 from datetime import datetime, timedelta
 
 import aiohttp
@@ -116,12 +116,13 @@ class UntappdClient:
             except RateLimitError:
                 await self.next_backend()
 
-    def iter_had_beers(
+    async def iter_had_beers(
         self, user_id: int | None = None, from_time: datetime | None = None
-    ) -> Iterator[tuple[UntappdBeerResult, UserRating]]:
+    ) -> AsyncIterator[tuple[UntappdBeerResult, UserRating]]:
         # TODO: multiple backends?
         if isinstance(self.current_backend, UntappdAPI):
-            yield from self.current_backend.iter_had_beers(user_id=user_id, from_time=from_time)
+            async for item in self.current_backend.iter_had_beers(user_id=user_id, from_time=from_time):
+                yield item
         # UntappdWeb doesn't support authenticated endpoints
 
 
