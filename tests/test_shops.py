@@ -87,6 +87,7 @@ class TestShopMap:
             assert "volta" in shop_map
             assert "craft" in shop_map
             assert "digtheline" in shop_map
+            assert "narushimashoten" in shop_map
 
             # Check that location-based shops are expanded
             # IBrew should have multiple locations
@@ -151,3 +152,69 @@ class TestShopIntegration:
             test_day = date(2024, 1, 15)
             shop3 = IBrew(session=session, day=test_day)
             assert shop3.day == test_day
+
+    @pytest.mark.integration
+    async def test_narushimashoten_scraper(self):
+        """Test Narushima Shoten scraper fetches and parses products correctly."""
+        from strinks.api.shops.narushimashoten import NarushimaShoten
+
+        async with aiohttp.ClientSession() as session:
+            shop = NarushimaShoten(session)
+
+            # Verify shop metadata
+            assert shop.short_name == "narushimashoten"
+            assert shop.display_name == "Narushima Shoten"
+
+            # Scrape first few beers
+            count = 0
+            beers_with_volume = 0
+            beers_with_default_volume = 0
+
+            async for beer in shop.iter_beers():
+                count += 1
+
+                # Validate required fields
+                assert beer.raw_name
+                assert beer.url.startswith("https://narushimashoten.com/products/")
+                assert beer.price > 0
+                assert beer.milliliters > 0
+                assert beer.quantity == 1
+
+                # Track volume extraction
+                if beer.milliliters == 330:
+                    beers_with_default_volume += 1
+                else:
+                    beers_with_volume += 1
+
+                # Only test first 10 to keep test fast
+                if count >= 10:
+                    break
+
+            # Should have scraped some beers
+            assert count > 0, "Should scrape at least one beer"
+
+            # Volume extraction works but not all products have it in descriptions
+            # Expect at least 20% extraction rate (rest use 330ml default)
+            assert beers_with_volume >= 2, f"Expected at least 2/10 beers with volume, got {beers_with_volume}"
+
+    @pytest.mark.integration
+    async def test_narushimashoten_volume_extraction(self):
+        """Test volume extraction from product descriptions."""
+        from strinks.api.shops.narushimashoten import NarushimaShoten
+
+        async with aiohttp.ClientSession() as session:
+            shop = NarushimaShoten(session)
+
+            # Test volume extraction from various formats
+            test_cases = [
+                ("473ml缶での販売", 473),
+                ("容量：375ml", 375),
+                ("350ml缶", 350),
+                ("360ml", 360),
+                ("", 330),  # Empty should default to 330
+                ("No volume info here", 330),  # No volume should default to 330
+            ]
+
+            for body_html, expected_ml in test_cases:
+                result = shop._extract_volume(body_html)
+                assert result == expected_ml, f"Expected {expected_ml}ml from '{body_html}', got {result}ml"
